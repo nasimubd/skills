@@ -13,6 +13,8 @@
         "@semantic-release/exec": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@semantic-release/github": "^11.0.1",
+        "conventional-changelog-writer": "^8.0.0",
+        "marked": "^15.0.12",
         "semantic-release": "^25.0.0",
       },
     },

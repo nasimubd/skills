@@ -20,6 +20,7 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "test": "node test/release-notes-rendering.test.mjs",
     "release:guard-clean-tree": "test -z \"$(git status --porcelain)\" || (echo '✗ Working directory not clean' && git status --short && exit 1)",
     "release": "npm run release:guard-clean-tree && semantic-release --no-ci",
     "release:dry": "npm run release:guard-clean-tree && semantic-release --no-ci --dry-run",
@@ -32,7 +33,7 @@
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "conventional-changelog-writer": "^8.0.0",
-    "marked": "^16.0.0",
+    "marked": "^15.0.12",
     "@semantic-release/exec": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.1",

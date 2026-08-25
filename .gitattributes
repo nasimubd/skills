@@ -15,14 +15,38 @@
 
 # Generated artifacts.
 #
-# `linguist-generated=true` keeps them out of the language statistics and
-# collapses them by default in pull-request diffs; `-diff` stops git from
-# printing the whole file into a terminal diff. Neither is ever hand-edited:
-# CHANGELOG.md is written by @semantic-release/changelog from the commit range,
-# and a lockfile is written by its package manager.
+# `linguist-generated=true` keeps a file out of the language statistics and
+# collapses it by default in a pull-request diff — still expandable, just not
+# in the way. Neither of these is ever hand-edited: CHANGELOG.md is written by
+# @semantic-release/changelog from the commit range, and a lockfile is written
+# by its package manager.
+#
+# CHANGELOG.md also takes `-diff`, which suppresses the textual diff entirely.
+# That is safe here precisely because it is derived: it restates commits that
+# are themselves reviewable, so nothing is lost by not diffing it.
 CHANGELOG.md       linguist-generated=true -diff
-package-lock.json  linguist-generated=true -diff
-bun.lock           linguist-generated=true -diff
-bun.lockb          linguist-generated=true -diff binary
-pnpm-lock.yaml     linguist-generated=true -diff
-yarn.lock          linguist-generated=true -diff
+
+# Lockfiles get `linguist-generated=true` and DELIBERATELY NOT `-diff`.
+#
+# `-diff` marks a file binary for diff purposes, and git then reports only
+# "Binary files a/bun.lock and b/bun.lock differ" — locally AND in review. For
+# a lockfile that is exactly the wrong trade: the lockfile diff is the single
+# place where a changed resolution, a substituted registry or an unexpected
+# transitive dependency becomes visible to a human. Collapsing it is helpful;
+# hiding it is a supply-chain review gap.
+#
+# This is not hypothetical. Adding one test-only dependency to this repository
+# silently split the tree, pinning a second copy of a package under
+# semantic-release to satisfy a peer range. Under `-diff` that change was
+# invisible; without it, one line of diff said so.
+#
+# bun.lock in particular is a TEXT file, so there is no technical reason to
+# treat it as binary at all.
+bun.lock           linguist-generated=true
+package-lock.json  linguist-generated=true
+pnpm-lock.yaml     linguist-generated=true
+yarn.lock          linguist-generated=true
+
+# The one genuinely binary lockfile: bun's pre-1.2 format. `binary` is correct
+# here because the bytes really are not text.
+bun.lockb          linguist-generated=true binary
