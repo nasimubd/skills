@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+#MISE description="Prune old plugin cache versions for this marketplace, keeping the N most recent (default 3, override with KEEP_VERSIONS). Safe for live sessions: recent versions are retained so a session started under an older release does not break when its cache directory is removed. Run periodically to reclaim disk space."
+set -euo pipefail
+
+SOURCE_REPOSITORY_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$SOURCE_REPOSITORY_ROOT"
+
+MARKETPLACE_NAME="$(jq -r '.name // empty' .claude-plugin/marketplace.json 2>/dev/null || true)"
+if [[ -z "$MARKETPLACE_NAME" ]]; then
+    MARKETPLACE_NAME="$(basename "$SOURCE_REPOSITORY_ROOT")"
+fi
+PLUGIN_CACHE_DIR="$HOME/.claude/plugins/cache/$MARKETPLACE_NAME"
+
+CURRENT_VERSION="$(jq -r '.version // empty' package.json 2>/dev/null || true)"
+VERSIONS_TO_KEEP="${KEEP_VERSIONS:-3}"
+
+if [[ ! -d "$PLUGIN_CACHE_DIR" ]]; then
+    echo "No plugin cache at $PLUGIN_CACHE_DIR — nothing to prune"
+    exit 0
+fi
+
+echo "Pruning $MARKETPLACE_NAME cache (keeping last $VERSIONS_TO_KEEP versions, current v${CURRENT_VERSION:-unknown})..."
+
+PRUNED_DIRECTORY_COUNT=0
+for plugin_cache_subdir in "$PLUGIN_CACHE_DIR"/*/; do
+    # An unmatched glob expands to the literal pattern, which is not a
+    # directory. Iterating a glob rather than `ls` output also keeps names
+    # containing whitespace or shell metacharacters intact.
+    [[ -d "$plugin_cache_subdir" ]] || continue
+    plugin_name="$(basename "$plugin_cache_subdir")"
+
+    # Sort semver descending. Non-semver directory names are filtered out by
+    # the pattern and are therefore never candidates for removal.
+    cached_versions_newest_first="$(
+        find "$plugin_cache_subdir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null \
+            | { grep -E '^[0-9]+\.[0-9]+\.[0-9]+' || true; } \
+            | sort -rV
+    )"
+
+    kept_version_count=0
+    while IFS= read -r cached_version; do
+        [[ -n "$cached_version" ]] || continue
+        kept_version_count=$((kept_version_count + 1))
+        if [[ "$kept_version_count" -gt "$VERSIONS_TO_KEEP" && "$cached_version" != "$CURRENT_VERSION" ]]; then
+            echo "  Removing $plugin_name/$cached_version"
+            # ${VAR:?} aborts rather than expanding to nothing if a component
+            # is empty. The loop guards above should make that impossible;
+            # this is cheap insurance on an `rm -rf`.
+            rm -rf "${plugin_cache_subdir:?plugin_cache_subdir must be set}/${cached_version:?cached_version must be set}"
+            PRUNED_DIRECTORY_COUNT=$((PRUNED_DIRECTORY_COUNT + 1))
+        fi
+    done <<< "$cached_versions_newest_first"
+done
+
+echo "✓ Cache pruned ($PRUNED_DIRECTORY_COUNT directory/directories removed)"

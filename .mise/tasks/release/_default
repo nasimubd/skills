@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#MISE description="Show every available release task with usage examples. Run this when unsure which release phase to invoke. Lists the full workflow, each individual phase, and the read-only utilities."
+set -euo pipefail
+
+# This is the discovery surface for the release namespace. It must list every
+# task that exists and nothing that does not: a task advertised here but
+# absent is worse than an undocumented one, because the reader trusts it.
+# When a task is added or removed, this index changes in the same commit.
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Release Workflow (mise-controlled)"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+echo "Full workflow:"
+echo "  mise run release:full        Run all five phases in order"
+echo "  mise run release:dry         Rehearse the release; writes nothing"
+echo ""
+echo "Individual phases:"
+echo "  mise run release:preflight   Phase 1: validate every prerequisite"
+echo "  mise run release:version     Phase 2: semantic-release bump, tag, publish"
+echo "  mise run release:sync        Phase 3: update marketplace clone + plugin cache"
+echo "  mise run release:verify      Phase 4: verify the published artifacts exist"
+echo "  mise run release:postflight  Phase 5: validate post-release git state"
+echo ""
+echo "Utilities:"
+echo "  mise run release:status      Show current version, tag and readiness (read-only)"
+echo "  mise run release:clean       Prune old plugin cache versions"
+echo ""
+echo "Environment:"
+echo "  GH_TOKEN                     Required by preflight and version"
+echo "  GH_ACCOUNT                   Optional; preflight warns on a mismatch"
+echo "  RELEASE_TIMING_PROFILE=1     Per-phase wall-clock timing in release:full"
+echo "  PREFLIGHT_TIMING_PROFILE=1   Per-check wall-clock timing in release:preflight"
+echo "  PREFLIGHT_KEEP_EVIDENCE=1    Keep preflight check logs for debugging"
+echo "  KEEP_VERSIONS=N              Cache versions release:clean retains (default 3)"
+echo ""

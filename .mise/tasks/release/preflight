@@ -1,0 +1,572 @@
+#!/usr/bin/env bash
+#MISE description="Phase 1 of 5: validate every release prerequisite before the version bump. Gating checks: clean working directory, GH_TOKEN presence and shape, marketplace manifest validation, plugin-versus-marketplace version equality, skill body validation, the marketplace regression suite, and releasable conventional commits since the last tag. Informational checks: expected GitHub account. Missing evidence counts as a failure, never as a pass. Exits non-zero on any gating failure."
+set -euo pipefail
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  PREFLIGHT DOCTRINE
+#
+#  Four properties govern this file. They are not stylistic; each one exists
+#  because its absence produced a defect somewhere. Preserve them.
+#
+#  1. STABLE CHECK NUMBERING WITH LETTER SUFFIXES.
+#     Checks are "Check 1", "Check 2", … and a check inserted between two
+#     existing ones takes a letter suffix ("Check 4a" between 4 and 5) rather
+#     than renumbering its successors. Numbers appear in operator notes, in
+#     commit messages and in failure reports; renumbering silently invalidates
+#     every one of those references. A number, once issued, is permanent.
+#
+#  2. RETIRED CHECKS ARE TOMBSTONED, NEVER DELETED.
+#     When a check is removed its comment block stays, marked RETIRED or
+#     NOT PORTED with a date and the reason. A deleted check leaves no trace,
+#     so the next reader re-proposes it, re-implements it, and rediscovers the
+#     reason it was dropped the hard way. The tombstone is the institutional
+#     memory. Its number is never reused.
+#
+#  3. MISSING EVIDENCE IS A FAILURE, NOT A PASS.
+#     Every gated check writes an exit-code sidecar and a log. The verdict is
+#     read back from those artifacts. If the sidecar is absent, empty, or the
+#     log never appeared, the check FAILS. The alternative — treating absent
+#     evidence as success — means a check that never ran reports green, which
+#     is strictly worse than having no check at all: it converts an unknown
+#     into a false assurance. A validator script that does not exist on disk
+#     is the same class of defect and is reported FAILING, never skipped.
+#
+#  4. EVERY CHECK IS LABELLED GATING OR INFORMATIONAL.
+#     The label appears in the check's comment block, in its console output,
+#     and in the exit path. Gating failures block the release. Informational
+#     findings are printed and counted, and never change the exit code. A
+#     check whose class is ambiguous will eventually be treated as whichever
+#     class is convenient at the time.
+#
+#  Consequence of (4): this script does NOT exit at the first gating failure.
+#  It runs every check, then exits once with a summary that names each failure
+#  and its class. A release blocked by three problems should report three
+#  problems, not force three sequential rerun-and-discover cycles.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ─── Evidence store ────────────────────────────────────────────────────────
+# Per-run directory. Not /tmp directly: two concurrent runs (an operator and
+# a scheduled job) would otherwise read each other's sidecars and report a
+# verdict for a check they never ran — a property-3 violation by collision.
+PREFLIGHT_EVIDENCE_DIR="${TMPDIR:-/tmp}/release-preflight-evidence.$$"
+mkdir -p "$PREFLIGHT_EVIDENCE_DIR"
+__preflight_cleanup_evidence_dir_unless_operator_asked_to_keep_it() {
+    # PREFLIGHT_KEEP_EVIDENCE=1 preserves logs for post-mortem debugging.
+    if [[ "${PREFLIGHT_KEEP_EVIDENCE:-0}" != "1" ]]; then
+        rm -rf "$PREFLIGHT_EVIDENCE_DIR"
+    else
+        echo "    ⓘ evidence retained: $PREFLIGHT_EVIDENCE_DIR"
+    fi
+}
+trap __preflight_cleanup_evidence_dir_unless_operator_asked_to_keep_it EXIT
+
+# ─── Verdict accumulators (property 4: the exit path knows the class) ──────
+PREFLIGHT_GATING_FAILURE_COUNT=0
+PREFLIGHT_INFORMATIONAL_WARNING_COUNT=0
+PREFLIGHT_GATING_FAILURE_LABELS=()
+PREFLIGHT_INFORMATIONAL_WARNING_LABELS=()
+
+__preflight_record_gating_failure() {
+    local check_label="$1" failure_detail="$2"
+    echo "  ✗ [GATING] $check_label — $failure_detail"
+    PREFLIGHT_GATING_FAILURE_LABELS+=("$check_label — $failure_detail")
+    PREFLIGHT_GATING_FAILURE_COUNT=$((PREFLIGHT_GATING_FAILURE_COUNT + 1))
+}
+
+__preflight_record_informational_warning() {
+    local check_label="$1" warning_detail="$2"
+    echo "  ⚠ [INFORMATIONAL] $check_label — $warning_detail"
+    PREFLIGHT_INFORMATIONAL_WARNING_LABELS+=("$check_label — $warning_detail")
+    PREFLIGHT_INFORMATIONAL_WARNING_COUNT=$((PREFLIGHT_INFORMATIONAL_WARNING_COUNT + 1))
+}
+
+# ─── Opt-in per-check wall-clock instrumentation ───────────────────────────
+# PREFLIGHT_TIMING_PROFILE=1 turns it on. Off by default: an always-on timer
+# adds noise to the output that operators learn to skip past, and the output
+# of a gate is read most carefully when it is shortest.
+preflight_timing_phase_start_seconds=""
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME() {
+    if [[ "${PREFLIGHT_TIMING_PROFILE:-0}" == "1" ]]; then
+        preflight_timing_phase_start_seconds="$EPOCHREALTIME"
+    fi
+}
+__preflight_timing_report_phase_elapsed_milliseconds() {
+    if [[ "${PREFLIGHT_TIMING_PROFILE:-0}" == "1" ]] && [[ -n "$preflight_timing_phase_start_seconds" ]]; then
+        local phase_label="$1"
+        local end_seconds="$EPOCHREALTIME"
+        # Portable sub-second math via awk: no bc dependency, no python spawn.
+        local elapsed_milliseconds
+        elapsed_milliseconds=$(awk -v s="$preflight_timing_phase_start_seconds" -v e="$end_seconds" \
+            'BEGIN { printf "%.0f", (e - s) * 1000 }')
+        echo "    ⧗ phase elapsed: ${elapsed_milliseconds}ms (${phase_label})"
+    fi
+}
+
+# ─── Property 3 machinery: evidence capture and verdict readback ───────────
+#
+# Every gated subprocess check goes through this pair. The runner captures
+# stdout+stderr to <key>.log and the exit status to <key>.exit; the verdict
+# function reads the sidecar back rather than trusting the runner's own
+# in-memory result. That indirection is what makes "the check never ran"
+# distinguishable from "the check passed" — the two are identical from the
+# caller's perspective if you only ever look at a variable.
+__preflight_run_gated_check_capturing_log_and_exit_code_sidecar() {
+    local evidence_key="$1"
+    shift
+    local evidence_log="$PREFLIGHT_EVIDENCE_DIR/$evidence_key.log"
+    local evidence_exit="$PREFLIGHT_EVIDENCE_DIR/$evidence_key.exit"
+    rm -f "$evidence_log" "$evidence_exit"
+    if "$@" >"$evidence_log" 2>&1; then
+        echo 0 >"$evidence_exit"
+    else
+        echo "$?" >"$evidence_exit"
+    fi
+}
+
+# Emits exactly one of: ok | missing-evidence | nonzero:<code>
+# Never emits "ok" by default or by fallthrough.
+__preflight_evidence_verdict_for_key() {
+    local evidence_key="$1"
+    local evidence_log="$PREFLIGHT_EVIDENCE_DIR/$evidence_key.log"
+    local evidence_exit="$PREFLIGHT_EVIDENCE_DIR/$evidence_key.exit"
+    # Missing evidence ⇒ FAIL. The runner may have been killed, the disk may
+    # be full, a trap may have fired mid-flight. None of those are passes.
+    if [[ ! -f "$evidence_exit" ]] || [[ ! -f "$evidence_log" ]]; then
+        echo "missing-evidence"
+        return 0
+    fi
+    local captured_exit_code
+    captured_exit_code=$(cat "$evidence_exit" 2>/dev/null || true)
+    if [[ -z "$captured_exit_code" ]]; then
+        # Sidecar exists but is empty: a truncated write is missing evidence.
+        echo "missing-evidence"
+        return 0
+    fi
+    if [[ "$captured_exit_code" == "0" ]]; then
+        echo "ok"
+    else
+        echo "nonzero:$captured_exit_code"
+    fi
+}
+
+# Prints the tail of a check's log, or says plainly that there is no log.
+__preflight_emit_evidence_log_tail() {
+    local evidence_key="$1" tail_line_count="${2:-20}"
+    local evidence_log="$PREFLIGHT_EVIDENCE_DIR/$evidence_key.log"
+    if [[ -f "$evidence_log" ]]; then
+        tail -n "$tail_line_count" "$evidence_log" | sed 's/^/      /'
+    else
+        echo "      (no log was produced — the check did not run to completion)"
+    fi
+}
+
+# Loose-coupled number extraction from a check's log. Never uses `head -1`:
+# under `set -o pipefail` a head that closes the pipe early SIGPIPEs its
+# producer, the pipeline reports 141, and `set -e` kills the run before the
+# verdict prints. `sed -n 1p` consumes its whole input and cannot do that.
+__preflight_extract_first_number_matching_pattern_from_evidence_log() {
+    local extended_regex_pattern="$1" evidence_key="$2"
+    local evidence_log="$PREFLIGHT_EVIDENCE_DIR/$evidence_key.log"
+    [[ -f "$evidence_log" ]] || { echo ""; return 0; }
+    { grep -oE "$extended_regex_pattern" "$evidence_log" 2>/dev/null || true; } \
+        | { grep -oE '[0-9]+' || true; } \
+        | sed -n '1p'
+}
+
+# Property 3, applied to the validator scripts themselves: a script that is
+# absent is a FAILING check, never a skipped one. A repository can otherwise
+# delete its own gate and keep releasing green.
+__preflight_gated_repo_script_is_present() {
+    local script_relative_path="$1"
+    [[ -f "$script_relative_path" ]]
+}
+
+# ─── Repository facts, derived — never hardcoded ───────────────────────────
+# This is a public repository. A literal committed here is a literal
+# published, so the account, the remote slug and the marketplace name are all
+# resolved at run time from the checkout itself.
+REPOSITORY_ROOT_ABSOLUTE_PATH="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$REPOSITORY_ROOT_ABSOLUTE_PATH"
+
+GIT_ORIGIN_REMOTE_URL="$(git remote get-url origin 2>/dev/null || true)"
+GIT_ORIGIN_REPOSITORY_SLUG="$(printf '%s' "$GIT_ORIGIN_REMOTE_URL" \
+    | sed -E 's#^git@[^:]+:##; s#^https?://[^/]+/##; s#\.git$##' || true)"
+GIT_ORIGIN_ACCOUNT_OWNER="${GIT_ORIGIN_REPOSITORY_SLUG%%/*}"
+
+if [[ "${PREFLIGHT_TIMING_PROFILE:-0}" == "1" ]]; then
+    echo "    ⧗ PREFLIGHT_TIMING_PROFILE=1 — per-check wall-clock instrumentation active"
+fi
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Phase 1: PREFLIGHT"
+echo "═══════════════════════════════════════════════════════════"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 1: Working directory clean.  [GATING]
+#
+# semantic-release commits and tags. An unrelated uncommitted edit present at
+# that moment is swept into the release commit and ships unreviewed.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 1 [GATING]: working directory clean..."
+WORKING_DIRECTORY_PORCELAIN_STATUS="$(git status --porcelain 2>/dev/null || true)"
+if [[ -n "$WORKING_DIRECTORY_PORCELAIN_STATUS" ]]; then
+    __preflight_record_gating_failure "Check 1 (working directory)" "uncommitted changes present"
+    echo "$WORKING_DIRECTORY_PORCELAIN_STATUS" | sed -n '1,20p' | sed 's/^/      /'
+else
+    echo "  ✓ [GATING] Check 1 — working directory clean"
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 1: working directory clean"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 2: GH_TOKEN present and correctly shaped.  [GATING]
+#
+# Shape only — no API call. A token probe here costs a network round trip on
+# every preflight and, on a bad day, contributes to a process storm. The
+# shape check catches the overwhelmingly common failure (variable unset, or
+# set to a placeholder) at zero cost; a genuinely revoked token fails loudly
+# at the publish step, which is the correct place for it to fail.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 2 [GATING]: GH_TOKEN presence and shape..."
+if [[ -z "${GH_TOKEN:-}" ]]; then
+    __preflight_record_gating_failure "Check 2 (GH_TOKEN)" \
+        "not set — export it, or run: eval \"\$(mise env)\""
+elif [[ ! "$GH_TOKEN" =~ ^(ghp_|github_pat_) ]]; then
+    __preflight_record_gating_failure "Check 2 (GH_TOKEN)" \
+        "set but malformed (${#GH_TOKEN} chars) — expected a ghp_ or github_pat_ prefix"
+else
+    echo "  ✓ [GATING] Check 2 — GH_TOKEN present and well-formed (${#GH_TOKEN} chars)"
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 2: GH_TOKEN presence and shape"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 3: Expected GitHub account.  [INFORMATIONAL]
+#
+# Deliberately non-gating. Releasing from a fork, a rename, or a secondary
+# account is legitimate; this check exists to make a surprising target
+# visible, not to prevent it. Promoting it to gating would block those
+# legitimate cases with no corresponding safety gain, since Check 2 already
+# guarantees a token and the push itself will fail if the account cannot
+# write.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 3 [INFORMATIONAL]: expected GitHub account..."
+if [[ -z "$GIT_ORIGIN_REPOSITORY_SLUG" ]]; then
+    __preflight_record_informational_warning "Check 3 (account)" \
+        "no origin remote configured — release target cannot be identified"
+elif [[ -z "${GH_ACCOUNT:-}" ]]; then
+    echo "  ⓘ [INFORMATIONAL] Check 3 — GH_ACCOUNT not configured; origin resolves to $GIT_ORIGIN_REPOSITORY_SLUG"
+elif [[ "${GH_ACCOUNT}" != "$GIT_ORIGIN_ACCOUNT_OWNER" ]]; then
+    __preflight_record_informational_warning "Check 3 (account)" \
+        "GH_ACCOUNT is ${GH_ACCOUNT} but origin owner is ${GIT_ORIGIN_ACCOUNT_OWNER} (${GIT_ORIGIN_REPOSITORY_SLUG})"
+else
+    echo "  ✓ [INFORMATIONAL] Check 3 — account ${GH_ACCOUNT} matches origin ${GIT_ORIGIN_REPOSITORY_SLUG}"
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 3: expected GitHub account"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 3b: RETIRED 2026-08-24 — not ported from the reference implementation.
+#
+# The reference carried a pending-release preview here: it ran the commit
+# classifier ahead of semantic-release and printed the next version number
+# and the commit that triggered the bump, purely informationally.
+#
+# Not ported because `release:dry` already answers exactly that question, in
+# more detail, from semantic-release itself rather than from a reimplementation
+# of its bump rules. Two independent classifiers for one question is a drift
+# hazard: when they disagree the operator has no way to tell which is right,
+# and the cheap one is not the authority.
+#
+# Number retired, never reused. If a preview is wanted in preflight, it should
+# shell out to `semantic-release --dry-run` rather than reimplement it.
+# ───────────────────────────────────────────────────────────────────────────
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 4: Marketplace and plugin manifest validation.  [GATING]
+#
+# The structural gate for a plugin marketplace: every plugin directory
+# registered, every registration resolving to a real path, every manifest
+# carrying its required fields.
+#
+# Note on the zero-plugin state: this repository legitimately starts with no
+# plugins. A validator failure here on a fresh checkout usually means the
+# marketplace manifest itself is absent, which IS a release blocker — you
+# cannot publish a marketplace with no manifest — so the failure is correct
+# and the message says which of the two it is.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 4 [GATING]: plugin manifest validation..."
+if ! __preflight_gated_repo_script_is_present "scripts/validate-plugins.mjs"; then
+    __preflight_record_gating_failure "Check 4 (validate-plugins)" \
+        "scripts/validate-plugins.mjs is absent — reported FAILING, not skipped"
+elif [[ ! -f ".claude-plugin/marketplace.json" ]]; then
+    __preflight_record_gating_failure "Check 4 (validate-plugins)" \
+        ".claude-plugin/marketplace.json is absent — a marketplace cannot be released without its manifest"
+else
+    __preflight_run_gated_check_capturing_log_and_exit_code_sidecar \
+        validate-plugins node scripts/validate-plugins.mjs
+    CHECK_4_VERDICT="$(__preflight_evidence_verdict_for_key validate-plugins)"
+    case "$CHECK_4_VERDICT" in
+        ok)
+            REGISTERED_PLUGIN_COUNT="$(jq -r '(.plugins // []) | length' .claude-plugin/marketplace.json 2>/dev/null || echo "?")"
+            echo "  ✓ [GATING] Check 4 — manifests valid across ${REGISTERED_PLUGIN_COUNT} registered plugin(s)"
+            ;;
+        missing-evidence)
+            __preflight_record_gating_failure "Check 4 (validate-plugins)" \
+                "no exit-code evidence was produced — treated as failure, not as a pass"
+            ;;
+        *)
+            __preflight_record_gating_failure "Check 4 (validate-plugins)" \
+                "validator exited ${CHECK_4_VERDICT#nonzero:}"
+            __preflight_emit_evidence_log_tail validate-plugins 20
+            ;;
+    esac
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 4: plugin manifest validation"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 4a: Version lockstep.  [GATING]
+#
+# One semver value is carried by the marketplace root, the marketplace-as-a-
+# plugin manifest, package.json, and every registered plugin entry. A
+# per-plugin plugins/<name>/plugin.json must carry NO version key at all:
+# nothing bumps it, so it can only ever be correct by coincidence.
+#
+# The reference implementation this repository was modelled on had no such
+# check. Its own strategy document specified one and it was never written. The
+# result was a plugin entry six minor versions behind the marketplace shipping
+# it, and a per-plugin manifest pinned at an ancient version across roughly
+# sixteen major releases — listed in the release commit's assets, so it
+# shipped; absent from the version sync script, so it never bumped. Nothing
+# failed, because nothing was looking.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 4a [GATING]: plugin/marketplace version equality..."
+if ! __preflight_gated_repo_script_is_present "scripts/check-version-equality.mjs"; then
+    __preflight_record_gating_failure "Check 4a (version equality)" \
+        "scripts/check-version-equality.mjs is absent — reported FAILING, not skipped (a missing gate is not a passing gate)"
+else
+    __preflight_run_gated_check_capturing_log_and_exit_code_sidecar \
+        version-equality node scripts/check-version-equality.mjs
+    CHECK_4A_VERDICT="$(__preflight_evidence_verdict_for_key version-equality)"
+    case "$CHECK_4A_VERDICT" in
+        ok)
+            echo "  ✓ [GATING] Check 4a — plugin and marketplace versions agree"
+            ;;
+        missing-evidence)
+            __preflight_record_gating_failure "Check 4a (version equality)" \
+                "no exit-code evidence was produced — treated as failure, not as a pass"
+            ;;
+        *)
+            __preflight_record_gating_failure "Check 4a (version equality)" \
+                "checker exited ${CHECK_4A_VERDICT#nonzero:}"
+            __preflight_emit_evidence_log_tail version-equality 20
+            ;;
+    esac
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 4a: plugin/marketplace version equality"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 4b: Skill body validation.  [GATING]
+#
+# A skill whose SKILL.md body is malformed installs without complaint and
+# then fails to do anything useful, which is the worst failure mode available
+# to a plugin marketplace: green on publish, broken on use.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 4b [GATING]: skill body validation..."
+if ! __preflight_gated_repo_script_is_present "scripts/validate-skill-body.mjs"; then
+    __preflight_record_gating_failure "Check 4b (skill body)" \
+        "scripts/validate-skill-body.mjs is absent — reported FAILING, not skipped (a missing gate is not a passing gate)"
+else
+    __preflight_run_gated_check_capturing_log_and_exit_code_sidecar \
+        skill-body node scripts/validate-skill-body.mjs
+    CHECK_4B_VERDICT="$(__preflight_evidence_verdict_for_key skill-body)"
+    case "$CHECK_4B_VERDICT" in
+        ok)
+            echo "  ✓ [GATING] Check 4b — skill bodies valid"
+            ;;
+        missing-evidence)
+            __preflight_record_gating_failure "Check 4b (skill body)" \
+                "no exit-code evidence was produced — treated as failure, not as a pass"
+            ;;
+        *)
+            __preflight_record_gating_failure "Check 4b (skill body)" \
+                "validator exited ${CHECK_4B_VERDICT#nonzero:}"
+            __preflight_emit_evidence_log_tail skill-body 20
+            ;;
+    esac
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 4b: skill body validation"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 4c: Marketplace regression suite.  [GATING]
+#
+# Auto-discovers and runs the repository's test files. Reported by count, not
+# by exit code alone: a suite that discovered zero test files and a suite that
+# ran every test file both exit 0, and only the printed count distinguishes
+# them. An exit status is not evidence that the wrapped thing ran.
+#
+# EMPTY-MARKETPLACE HANDLING. The suite refuses to report success on zero
+# discovered tests, which is correct: nothing ran, so nothing was verified.
+# But a marketplace with no plugins registered yet legitimately has no tests,
+# and a scaffold whose gates cannot pass is a scaffold nobody can verify.
+#
+# So the allowance is DERIVED from the manifest on every run, never
+# configured. It is enabled only while the registry is genuinely empty, and it
+# disappears by itself the moment the first plugin is registered — at which
+# point zero discovered tests becomes a real failure again. A flag someone
+# sets by hand is a flag someone forgets to unset; this one cannot be left on.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 4c [GATING]: marketplace regression suite..."
+MARKETPLACE_SUITE_TASK_FILE=".mise/tasks/test-marketplace-hook-regression-suite"
+REGISTERED_PLUGIN_COUNT_FOR_SUITE="$(jq -r '(.plugins // []) | length' .claude-plugin/marketplace.json 2>/dev/null || echo "?")"
+if [[ ! -f "$MARKETPLACE_SUITE_TASK_FILE" ]]; then
+    __preflight_record_gating_failure "Check 4c (regression suite)" \
+        "$MARKETPLACE_SUITE_TASK_FILE is absent — reported FAILING, not skipped"
+elif [[ "$REGISTERED_PLUGIN_COUNT_FOR_SUITE" == "0" ]]; then
+    echo "  ⓘ [GATING → WAIVED] Check 4c — the registry has 0 plugins, so there is nothing"
+    echo "      to test and nothing was verified. This waiver is derived from"
+    echo "      .claude-plugin/marketplace.json on every run and lapses automatically"
+    echo "      the moment a plugin is registered."
+else
+    __preflight_run_gated_check_capturing_log_and_exit_code_sidecar \
+        regression-suite mise run test-marketplace-hook-regression-suite
+    CHECK_4C_VERDICT="$(__preflight_evidence_verdict_for_key regression-suite)"
+    case "$CHECK_4C_VERDICT" in
+        ok)
+            REGRESSION_SUITE_PASSED_FILE_COUNT="$(__preflight_extract_first_number_matching_pattern_from_evidence_log \
+                'Test files PASSED:[[:space:]]+[0-9]+' regression-suite)"
+            REGRESSION_SUITE_FAILED_FILE_COUNT="$(__preflight_extract_first_number_matching_pattern_from_evidence_log \
+                'Test files FAILED:[[:space:]]+[0-9]+' regression-suite)"
+            echo "  ✓ [GATING] Check 4c — regression suite: ${REGRESSION_SUITE_PASSED_FILE_COUNT:-0} test file(s) passed, ${REGRESSION_SUITE_FAILED_FILE_COUNT:-0} failed"
+            ;;
+        missing-evidence)
+            __preflight_record_gating_failure "Check 4c (regression suite)" \
+                "no exit-code evidence was produced — treated as failure, not as a pass"
+            ;;
+        *)
+            __preflight_record_gating_failure "Check 4c (regression suite)" \
+                "suite exited ${CHECK_4C_VERDICT#nonzero:}"
+            __preflight_emit_evidence_log_tail regression-suite 20
+            ;;
+    esac
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 4c: marketplace regression suite"
+
+# ───────────────────────────────────────────────────────────────────────────
+# Checks 4d–4v: NOT PORTED 2026-08-24 — hook-architecture audits, no premise here.
+#
+# The reference implementation ran seventeen audits in this range, fanned out
+# in parallel: PreToolUse schema correctness, wildcard-matcher cost, silently
+# dropped additionalContext across five hook events, escape-hatch-marker
+# registries, registry-to-docs drift, and so on. All of them audit the hook
+# surface of a marketplace that ships dozens of runtime hooks.
+#
+# This repository has no such surface. An audit whose precondition cannot
+# occur cannot catch a regression; it can only reject legitimate code and
+# spend wall-clock doing it. The parallel fan-out machinery those audits
+# needed (xargs lane clamping, elapsed-ms sidecars, per-audit bucket
+# attribution) went with them — three sequential gated checks do not need a
+# scheduler.
+#
+# What was kept from that range is the part that generalises: the exit-code
+# sidecar contract and its missing-evidence-is-failure rule, which now live
+# in the evidence helpers at the top of this file and guard every gated check.
+#
+# Numbers 4d through 4v are retired and are never reused. If this repository
+# grows hooks, the audits come back under fresh letters.
+# ───────────────────────────────────────────────────────────────────────────
+
+# ───────────────────────────────────────────────────────────────────────────
+# Check 5: Releasable conventional commits since the last tag.  [GATING]
+#
+# Guards the silent-no-op release: semantic-release exits 0 having published
+# nothing when no commit in range carries a releasable type, and the operator
+# reads that green exit as a successful release.
+#
+# First-run behaviour, which this repository is currently in: zero tags is
+# NOT an error. With no tag, the range is the entire history and every commit
+# in it is a candidate. An unborn HEAD — a repository with no commits at all —
+# IS a gating failure, because there is provably nothing to release.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 5 [GATING]: releasable commits since last tag..."
+if ! git rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
+    __preflight_record_gating_failure "Check 5 (releasable commits)" \
+        "repository has no commits yet — nothing to release"
+else
+    # `git describe` writes to stderr and exits non-zero when no tag exists.
+    # That is the expected first-run state, not a failure: absorb it.
+    MOST_RECENT_RELEASE_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+    if [[ -n "$MOST_RECENT_RELEASE_TAG" ]]; then
+        COMMIT_RANGE_FOR_RELEASE_ANALYSIS="${MOST_RECENT_RELEASE_TAG}..HEAD"
+        COMMIT_RANGE_HUMAN_DESCRIPTION="since ${MOST_RECENT_RELEASE_TAG}"
+    else
+        COMMIT_RANGE_FOR_RELEASE_ANALYSIS="HEAD"
+        COMMIT_RANGE_HUMAN_DESCRIPTION="in full history (no tags yet — first release)"
+    fi
+
+    COMMIT_SUBJECTS_IN_RANGE="$(git log "$COMMIT_RANGE_FOR_RELEASE_ANALYSIS" --format=%s 2>/dev/null || true)"
+    if [[ -z "$COMMIT_SUBJECTS_IN_RANGE" ]]; then
+        TOTAL_COMMIT_COUNT_IN_RANGE=0
+    else
+        TOTAL_COMMIT_COUNT_IN_RANGE="$(printf '%s\n' "$COMMIT_SUBJECTS_IN_RANGE" | wc -l | tr -d ' ')"
+    fi
+
+    # Releasable = a conventional type that produces a version bump, or any
+    # type marked breaking with `!`. `grep -c` exits 1 on zero matches, which
+    # under `set -e` would abort the run: absorb with `|| true`.
+    RELEASABLE_COMMIT_COUNT="$(printf '%s\n' "$COMMIT_SUBJECTS_IN_RANGE" \
+        | { grep -cE '^(feat|fix|perf|revert)(\([^)]*\))?!?:|^[a-z]+(\([^)]*\))?!:' || true; })"
+    RELEASABLE_COMMIT_COUNT="${RELEASABLE_COMMIT_COUNT:-0}"
+
+    if [[ "$TOTAL_COMMIT_COUNT_IN_RANGE" -eq 0 ]]; then
+        __preflight_record_gating_failure "Check 5 (releasable commits)" \
+            "no commits ${COMMIT_RANGE_HUMAN_DESCRIPTION}"
+    elif [[ "$RELEASABLE_COMMIT_COUNT" -eq 0 ]]; then
+        __preflight_record_gating_failure "Check 5 (releasable commits)" \
+            "${TOTAL_COMMIT_COUNT_IN_RANGE} commit(s) ${COMMIT_RANGE_HUMAN_DESCRIPTION}, but none carry a releasable conventional type (feat, fix, perf, revert, or a breaking !) — semantic-release would publish nothing and still exit 0"
+    else
+        echo "  ✓ [GATING] Check 5 — ${RELEASABLE_COMMIT_COUNT} releasable of ${TOTAL_COMMIT_COUNT_IN_RANGE} commit(s) ${COMMIT_RANGE_HUMAN_DESCRIPTION}"
+    fi
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 5: releasable commits since last tag"
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  EXIT PATH (property 4: the class of every finding is explicit here)
+#
+#  Gating failures set the exit code. Informational findings are reported in
+#  their own section and deliberately do not, so that the exit code answers
+#  exactly one question: may this release proceed.
+# ═══════════════════════════════════════════════════════════════════════════
+echo ""
+if [[ "$PREFLIGHT_INFORMATIONAL_WARNING_COUNT" -gt 0 ]]; then
+    echo "─── Informational findings ($PREFLIGHT_INFORMATIONAL_WARNING_COUNT) — do NOT block the release ───"
+    for informational_warning_label in "${PREFLIGHT_INFORMATIONAL_WARNING_LABELS[@]}"; do
+        echo "  ⚠ $informational_warning_label"
+    done
+    echo ""
+fi
+
+if [[ "$PREFLIGHT_GATING_FAILURE_COUNT" -gt 0 ]]; then
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  ✗ Preflight FAILED — $PREFLIGHT_GATING_FAILURE_COUNT gating check(s)"
+    echo "═══════════════════════════════════════════════════════════"
+    for gating_failure_label in "${PREFLIGHT_GATING_FAILURE_LABELS[@]}"; do
+        echo "  ✗ $gating_failure_label"
+    done
+    echo ""
+    echo "  ($PREFLIGHT_INFORMATIONAL_WARNING_COUNT informational finding(s) did not affect this verdict.)"
+    echo ""
+    exit 1
+fi
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  ✓ Preflight PASSED — all gating checks green"
+echo "═══════════════════════════════════════════════════════════"
+echo "  Gating: 7 checks run, 0 failed."
+echo "  Informational: $PREFLIGHT_INFORMATIONAL_WARNING_COUNT finding(s), none blocking."
+echo ""

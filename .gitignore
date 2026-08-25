@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build artifacts
+dist/
+build/
+.build/
+*.bun-build
+.*.bun-build
+
+# Claude Code session state — with ONE exception.
+#
+# `.claude/` holds machine-local session and settings files that must never be
+# committed, but this repository DOES ship its slash-command wrappers: they are
+# the discoverable entry point to every mise task, and a wrapper that only
+# exists on one machine is not an entry point at all.
+#
+# The two lines below are the only form of this that works. A bare `.claude/`
+# followed by `!.claude/commands/` does NOT re-include anything: git never
+# descends into an excluded directory, so a negation under it is unreachable.
+# Excluding the CONTENTS with `.claude/*` leaves the directory itself
+# traversable, and the negation then applies.
+.claude/*
+!.claude/commands/
+
+# Local mise configuration. Holds machine-specific paths and API tokens; a
+# committed copy is a published copy.
+.mise.toml
+
+# Lint / link-check result caches
+.lint-relative-paths-results.txt
+.lychee-results.json
+.lychee-results.txt
+.lycheecache
+.link-check-results.md
+
+# Python / Rust caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Temporary workspace
+tmp/
+
+# Exactly one lockfile ships, and it is bun.lock.
+#
+# Two lockfiles in one repository is not redundancy, it is ambiguity: they
+# resolve independently, drift apart without anything noticing, and the next
+# person to debug an install has to work out which one their tooling actually
+# read. The reference marketplace this repo was modelled on shipped both and
+# had no answer to that question.
+#
+# If you prefer npm, delete bun.lock, remove this block, and commit
+# package-lock.json instead — but ship one, not both.
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

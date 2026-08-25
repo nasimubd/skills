@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#MISE description="Rehearse the release without changing anything. Runs preflight first, then semantic-release in dry-run mode. Shows the next version number, the commits that would be included, and a changelog preview. Writes no tag, publishes no release, pushes nothing. Safe to run repeatedly."
+#MISE depends=["release:preflight"]
+set -euo pipefail
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  DRY RUN (no changes will be made)"
+echo "═══════════════════════════════════════════════════════════"
+
+# Same binary resolution as release:version — a dry run that rehearses a
+# different semantic-release version than the real release would use is not a
+# rehearsal of anything.
+if [[ -x "node_modules/.bin/semantic-release" ]]; then
+    SEMANTIC_RELEASE_BINARY_PATH="node_modules/.bin/semantic-release"
+elif command -v semantic-release >/dev/null 2>&1; then
+    SEMANTIC_RELEASE_BINARY_PATH="$(command -v semantic-release)"
+    echo "  ⚠ Using semantic-release from PATH — no project-pinned copy found"
+else
+    echo "  ✗ semantic-release not found (looked in node_modules/.bin, then PATH)"
+    echo "    Install project dependencies first, then re-run."
+    exit 1
+fi
+
+"$SEMANTIC_RELEASE_BINARY_PATH" --no-ci --dry-run

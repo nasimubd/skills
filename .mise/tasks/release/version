@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+#MISE description="Phase 2 of 5: run semantic-release to analyse conventional commits, determine the version bump, update the changelog, sync the version across package.json and every plugin manifest and the marketplace manifest, create the git tag, publish the GitHub release, and push. Depends on preflight passing. Driven by release.config.cjs."
+#MISE depends=["release:preflight"]
+set -euo pipefail
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Phase 2: VERSION (semantic-release)"
+echo "═══════════════════════════════════════════════════════════"
+
+# Resolve the semantic-release binary explicitly rather than assuming it is on
+# PATH. A globally installed copy and a project-pinned copy can be different
+# versions with different bump rules, and the project pin is authoritative:
+# release.config.cjs is written against it.
+if [[ -x "node_modules/.bin/semantic-release" ]]; then
+    SEMANTIC_RELEASE_BINARY_PATH="node_modules/.bin/semantic-release"
+    echo "→ Using project-pinned semantic-release (node_modules/.bin)"
+elif command -v semantic-release >/dev/null 2>&1; then
+    SEMANTIC_RELEASE_BINARY_PATH="$(command -v semantic-release)"
+    echo "→ Using semantic-release from PATH: $SEMANTIC_RELEASE_BINARY_PATH"
+    echo "  ⚠ No project-pinned copy found — release.config.cjs is written against the pinned version"
+else
+    echo "  ✗ semantic-release not found (looked in node_modules/.bin, then PATH)"
+    echo "    Install project dependencies first, then re-run this phase."
+    exit 1
+fi
+
+if [[ ! -f "release.config.cjs" ]]; then
+    echo "  ✗ release.config.cjs is absent — semantic-release has no configuration to run against"
+    exit 1
+fi
+
+# --no-ci: this pipeline is operator-driven from a local checkout, not a CI
+# runner. Without it semantic-release detects the absence of CI environment
+# variables and refuses to publish.
+"$SEMANTIC_RELEASE_BINARY_PATH" --no-ci
+
+echo ""
+echo "✓ Version phase complete"
+echo ""

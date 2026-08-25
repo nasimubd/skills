@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+#MISE description="Display current release state: package.json version, latest git tag, commits and releasable commits since that tag, working directory cleanliness, and GH_TOKEN and GH_ACCOUNT configuration. Read-only, no side effects. Use before releasing to assess readiness."
+set -euo pipefail
+
+SOURCE_REPOSITORY_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$SOURCE_REPOSITORY_ROOT"
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Release Status"
+echo "═══════════════════════════════════════════════════════════"
+
+# Current version. A repository that has not yet been given a package.json is
+# a legitimate pre-first-release state, reported as such rather than crashed on.
+if [[ -f "package.json" ]]; then
+    CURRENT_VERSION="$(jq -r '.version // "none"' package.json 2>/dev/null || echo "unreadable")"
+    echo "Current version:  v$CURRENT_VERSION"
+else
+    echo "Current version:  (no package.json yet)"
+fi
+
+# Latest tag. No tags is the expected state before the first release.
+LATEST_RELEASE_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+if [[ -n "$LATEST_RELEASE_TAG" ]]; then
+    echo "Latest git tag:   $LATEST_RELEASE_TAG"
+else
+    echo "Latest git tag:   none (no release cut yet)"
+fi
+
+# Commits since the tag — or across the whole history when there is no tag.
+if ! git rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
+    echo "Commits since:    n/a (repository has no commits yet)"
+else
+    if [[ -n "$LATEST_RELEASE_TAG" ]]; then
+        COMMIT_RANGE="${LATEST_RELEASE_TAG}..HEAD"
+        RANGE_DESCRIPTION="since $LATEST_RELEASE_TAG"
+    else
+        COMMIT_RANGE="HEAD"
+        RANGE_DESCRIPTION="in full history"
+    fi
+    COMMIT_SUBJECTS="$(git log "$COMMIT_RANGE" --format=%s 2>/dev/null || true)"
+    if [[ -z "$COMMIT_SUBJECTS" ]]; then
+        TOTAL_COMMITS=0
+    else
+        TOTAL_COMMITS="$(printf '%s\n' "$COMMIT_SUBJECTS" | wc -l | tr -d ' ')"
+    fi
+    # `grep -c` exits 1 on zero matches; absorb it so `set -e` does not abort.
+    RELEASABLE_COMMITS="$(printf '%s\n' "$COMMIT_SUBJECTS" \
+        | { grep -cE '^(feat|fix|perf|revert)(\([^)]*\))?!?:|^[a-z]+(\([^)]*\))?!:' || true; })"
+    echo "Commits since:    $TOTAL_COMMITS $RANGE_DESCRIPTION (${RELEASABLE_COMMITS:-0} releasable)"
+fi
+
+# Working directory.
+if [[ -z "$(git status --porcelain 2>/dev/null || true)" ]]; then
+    echo "Working dir:      ✓ clean"
+else
+    echo "Working dir:      ✗ dirty"
+    git status --short | sed -n '1,5p' | sed 's/^/                  /'
+fi
+
+# GitHub auth. Shape only — no API call, so this stays instant and side-effect
+# free even when run in a loop.
+if [[ -n "${GH_TOKEN:-}" ]]; then
+    echo "GitHub token:     ✓ present (${#GH_TOKEN} chars)"
+else
+    echo "GitHub token:     ✗ not set (run: eval \"\$(mise env)\")"
+fi
+if [[ -n "${GH_ACCOUNT:-}" ]]; then
+    echo "Target account:   $GH_ACCOUNT"
+else
+    echo "Target account:   (GH_ACCOUNT not configured)"
+fi
+
+GIT_ORIGIN_REMOTE_URL="$(git remote get-url origin 2>/dev/null || true)"
+if [[ -n "$GIT_ORIGIN_REMOTE_URL" ]]; then
+    GIT_ORIGIN_REPOSITORY_SLUG="$(printf '%s' "$GIT_ORIGIN_REMOTE_URL" \
+        | sed -E 's#^git@[^:]+:##; s#^https?://[^/]+/##; s#\.git$##' || true)"
+    echo "Origin remote:    $GIT_ORIGIN_REPOSITORY_SLUG"
+else
+    echo "Origin remote:    (none configured)"
+fi
+
+echo ""

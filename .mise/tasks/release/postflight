@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+#MISE description="Phase 5 of 5: post-release git state validation. Resets lockfile drift (a build artifact, not a change), then verifies that no uncommitted changes and no unpushed commits remain. Catches release side effects that would otherwise accumulate silently. Exits non-zero on any failure."
+set -euo pipefail
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Phase 5: POSTFLIGHT"
+echo "═══════════════════════════════════════════════════════════"
+
+POSTFLIGHT_FAILURE_COUNT=0
+
+# Check 1: Lockfile drift. [GATING, self-healing]
+# A lockfile touched by an install during the release is a build artifact, not
+# an intentional change, so it is reset rather than reported. Everything else
+# that is dirty is reported by Check 2.
+echo "→ Check 1: lockfile drift..."
+LOCKFILE_DRIFT_PATHS="$(git diff --name-only 2>/dev/null \
+    | { grep -E '^(package-lock\.json|bun\.lockb|bun\.lock|yarn\.lock|pnpm-lock\.yaml|uv\.lock|Cargo\.lock)$' || true; })"
+if [[ -n "$LOCKFILE_DRIFT_PATHS" ]]; then
+    echo "  Lockfile drift detected — resetting (build artifact):"
+    echo "$LOCKFILE_DRIFT_PATHS" | sed 's/^/    /'
+    echo "$LOCKFILE_DRIFT_PATHS" | xargs git checkout --
+    echo "  ✓ Lockfiles reset"
+else
+    echo "  ✓ No lockfile drift"
+fi
+
+# Check 2: Uncommitted changes, evaluated after the lockfile reset above.
+echo "→ Check 2: working directory clean..."
+WORKING_DIRECTORY_PORCELAIN_STATUS="$(git status --porcelain 2>/dev/null || true)"
+if [[ -n "$WORKING_DIRECTORY_PORCELAIN_STATUS" ]]; then
+    echo "  ✗ Uncommitted changes detected:"
+    echo "$WORKING_DIRECTORY_PORCELAIN_STATUS" | sed -n '1,20p' | sed 's/^/    /'
+    POSTFLIGHT_FAILURE_COUNT=$((POSTFLIGHT_FAILURE_COUNT + 1))
+else
+    echo "  ✓ Working directory clean"
+fi
+
+# Check 3: Unpushed commits.
+# shellcheck disable=SC1083
+# SC1083 false positive: `@{u}` is git's upstream-branch reference syntax, not
+# a brace expansion. ShellCheck does not model git ref syntax. `git log
+# @{u}..HEAD` means "commits between the configured upstream and HEAD" and is
+# correct as written.
+echo "→ Check 3: all commits pushed..."
+if ! git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    echo "  ⚠ No upstream tracking branch configured — cannot determine push state"
+else
+    # shellcheck disable=SC1083
+    UNPUSHED_COMMITS="$(git log --oneline '@{u}..HEAD' 2>/dev/null || true)"
+    if [[ -n "$UNPUSHED_COMMITS" ]]; then
+        echo "  ✗ Unpushed commits:"
+        echo "$UNPUSHED_COMMITS" | sed 's/^/    /'
+        POSTFLIGHT_FAILURE_COUNT=$((POSTFLIGHT_FAILURE_COUNT + 1))
+    else
+        echo "  ✓ All commits pushed to remote"
+    fi
+fi
+
+echo ""
+if [[ "$POSTFLIGHT_FAILURE_COUNT" -gt 0 ]]; then
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  ✗ Postflight FAILED ($POSTFLIGHT_FAILURE_COUNT issue(s))"
+    echo "═══════════════════════════════════════════════════════════"
+    exit 1
+fi
+echo "═══════════════════════════════════════════════════════════"
+echo "  ✓ Postflight PASSED — clean landing"
+echo "═══════════════════════════════════════════════════════════"
+echo ""

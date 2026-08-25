@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+#MISE description="Execute the complete release pipeline: preflight validation, then semantic-release version bump plus changelog plus git tag plus GitHub release, then marketplace sync and cache population, then artifact verification, then postflight git state validation. Primary entry point for cutting a release. Requires GH_TOKEN and a clean working directory. Set RELEASE_TIMING_PROFILE=1 for per-phase wall-clock instrumentation."
+set -euo pipefail
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  RELEASE ORCHESTRATOR
+#
+#  Five phases, run in order, each one a separate mise task that also works
+#  standalone. This file owns the sequence and nothing else: no phase logic
+#  lives here, so a phase can be rerun by hand after a failure without
+#  reproducing anything the orchestrator does.
+#
+#  Phases are invoked explicitly rather than through `#MISE depends=[...]`.
+#  Functionally the two are equivalent — mise wires both up the same way —
+#  but the explicit call lets the timing wrapper below see each phase's
+#  wall-clock, which a depends-declared phase runs outside of.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ─── Opt-in pipeline-level wall-clock instrumentation ──────────────────────
+# RELEASE_TIMING_PROFILE=1 turns it on. This is the pipeline-level twin of
+# preflight's PREFLIGHT_TIMING_PROFILE: that one measures per-check timing
+# inside phase 1, this one measures per-phase timing across all five. Set
+# both to get the sub-ranking inside phase 1 as well.
+#
+# Off by default. Instrumentation that always prints is instrumentation
+# operators learn to scroll past.
+__release_phase_timing_records=()
+
+__release_run_phase_with_optional_wall_clock_capture() {
+    local human_readable_phase_label="$1"
+    shift
+    local phase_invocation_argv=("$@")
+
+    if [[ "${RELEASE_TIMING_PROFILE:-0}" != "1" ]]; then
+        "${phase_invocation_argv[@]}"
+        return $?
+    fi
+
+    local phase_start_seconds="$EPOCHREALTIME"
+    local phase_exit_code=0
+    "${phase_invocation_argv[@]}" || phase_exit_code=$?
+    local phase_end_seconds="$EPOCHREALTIME"
+
+    local phase_elapsed_milliseconds
+    phase_elapsed_milliseconds=$(awk \
+        -v s="$phase_start_seconds" \
+        -v e="$phase_end_seconds" \
+        'BEGIN { printf "%.0f", (e - s) * 1000 }')
+    echo "    ⧗ release-phase elapsed: ${phase_elapsed_milliseconds}ms (${human_readable_phase_label})"
+
+    # TAB-separated so `sort -rn -k1` stays correct even though every phase
+    # label contains spaces.
+    __release_phase_timing_records+=(
+        "${phase_elapsed_milliseconds}"$'\t'"${human_readable_phase_label}"
+    )
+    return $phase_exit_code
+}
+
+__release_emit_slowest_phase_ranking() {
+    if [[ "${RELEASE_TIMING_PROFILE:-0}" != "1" ]]; then
+        return 0
+    fi
+    if [[ "${#__release_phase_timing_records[@]}" -eq 0 ]]; then
+        return 0
+    fi
+    local top_n_phases_to_display="${RELEASE_TIMING_TOP_N:-5}"
+    echo ""
+    echo "    ⧗ ─── Top ${top_n_phases_to_display} slowest release phases ───"
+    printf '%s\n' "${__release_phase_timing_records[@]}" \
+        | sort -rn -k1 \
+        | sed -n "1,${top_n_phases_to_display}p" \
+        | awk -F'\t' '{ printf "      %2d. %6d ms  %s\n", NR, $1, $2 }'
+    echo "    ⧗ (override count via RELEASE_TIMING_TOP_N=N)"
+    echo "    ⧗ (set PREFLIGHT_TIMING_PROFILE=1 too for the per-check sub-ranking inside Phase 1)"
+}
+
+# Whole-pipeline timer. Lets the operator confirm sum-of-phases ≈ wall-clock;
+# the gap is orchestrator overhead and should be a few milliseconds.
+release_pipeline_start_seconds=""
+if [[ "${RELEASE_TIMING_PROFILE:-0}" == "1" ]]; then
+    release_pipeline_start_seconds="$EPOCHREALTIME"
+    echo "    ⧗ RELEASE_TIMING_PROFILE=1 — per-phase wall-clock instrumentation active"
+fi
+
+# ─── SSH connection multiplexing: NOT PORTED 2026-08-24 ────────────────────
+# The reference wrapped this pipeline in an opt-in SSH ControlMaster setup
+# plus a pre-warm handshake to github.com, to spare the semantic-release auth
+# check a cold SSH handshake on every release.
+#
+# Not ported: the saving is real only when SSH round trips dominate, which
+# happens at a tag count and release cadence far above this repository's. At
+# this scale the pre-warm costs about as much as it saves, and it buys that
+# non-saving with a mutable ~/.ssh socket directory and an exported
+# GIT_SSH_COMMAND that silently overrides an operator's own SSH config for
+# the whole process tree. Wrong trade at this size.
+#
+# If releases here ever become SSH-bound, reintroduce it as an opt-in env
+# var — never as a default.
+
+MARKETPLACE_DISPLAY_NAME="$(jq -r '.name // empty' .claude-plugin/marketplace.json 2>/dev/null || true)"
+if [[ -z "$MARKETPLACE_DISPLAY_NAME" ]]; then
+    MARKETPLACE_DISPLAY_NAME="$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")"
+fi
+
+echo ""
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║  Full Release Workflow — ${MARKETPLACE_DISPLAY_NAME}"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+
+# Phase 1: Preflight — every gating prerequisite before anything mutates.
+__release_run_phase_with_optional_wall_clock_capture \
+    "Phase 1: preflight (working tree, token, manifest validation, version equality, skill bodies, regression suite, releasable commits)" \
+    mise run release:preflight
+
+# Phase 2: Version — the first phase that writes. semantic-release analyses
+# the commits, bumps, tags, pushes and publishes the GitHub release.
+__release_run_phase_with_optional_wall_clock_capture \
+    "Phase 2: version (semantic-release commit-analyzer, version bump, changelog, git tag, GitHub release)" \
+    mise run release:version
+
+# Phase 3: Sync — bring the local Claude Code environment to the version that
+# was just published.
+__release_run_phase_with_optional_wall_clock_capture \
+    "Phase 3: sync (marketplace clone update, plugin cache population)" \
+    mise run release:sync
+
+# Phase 4: Verify — confirm the artifacts the previous phases claim to have
+# produced actually exist.
+__release_run_phase_with_optional_wall_clock_capture \
+    "Phase 4: verify (git tag, GitHub release, marketplace clone version, cache directories)" \
+    mise run release:verify
+
+# Phase 5: Postflight — catch side effects the release itself introduced.
+__release_run_phase_with_optional_wall_clock_capture \
+    "Phase 5: postflight (lockfile drift, working directory clean, all commits pushed)" \
+    mise run release:postflight
+
+echo ""
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║  ✓ Release workflow complete                              ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+
+if [[ "${RELEASE_TIMING_PROFILE:-0}" == "1" ]] && [[ -n "$release_pipeline_start_seconds" ]]; then
+    release_pipeline_end_seconds="$EPOCHREALTIME"
+    release_pipeline_elapsed_milliseconds=$(awk \
+        -v s="$release_pipeline_start_seconds" \
+        -v e="$release_pipeline_end_seconds" \
+        'BEGIN { printf "%.0f", (e - s) * 1000 }')
+    echo "    ⧗ whole-pipeline elapsed: ${release_pipeline_elapsed_milliseconds}ms (release:full total)"
+fi
+__release_emit_slowest_phase_ranking

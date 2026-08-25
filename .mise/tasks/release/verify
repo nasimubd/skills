@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+#MISE description="Phase 4 of 5: verify the artifacts the release claims to have produced. Checks that the git tag exists, the GitHub release is published, the marketplace clone is at the released version, every registered plugin has a cache directory, and each plugin hooks manifest is valid JSON. Exits non-zero when a required artifact is missing."
+set -euo pipefail
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Phase 4: VERIFY"
+echo "═══════════════════════════════════════════════════════════"
+
+SOURCE_REPOSITORY_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$SOURCE_REPOSITORY_ROOT"
+
+MARKETPLACE_NAME="$(jq -r '.name // empty' .claude-plugin/marketplace.json 2>/dev/null || true)"
+if [[ -z "$MARKETPLACE_NAME" ]]; then
+    MARKETPLACE_NAME="$(basename "$SOURCE_REPOSITORY_ROOT")"
+fi
+MARKETPLACE_CLONE_DIR="$HOME/.claude/plugins/marketplaces/$MARKETPLACE_NAME"
+PLUGIN_CACHE_DIR="$HOME/.claude/plugins/cache/$MARKETPLACE_NAME"
+
+if [[ ! -f "package.json" ]]; then
+    echo "  ✗ package.json is absent — cannot determine which version to verify"
+    exit 1
+fi
+RELEASED_VERSION="$(jq -r '.version // empty' package.json)"
+if [[ -z "$RELEASED_VERSION" || "$RELEASED_VERSION" == "null" ]]; then
+    echo "  ✗ package.json has no version field"
+    exit 1
+fi
+
+# The remote slug is derived from the origin URL, never hardcoded — this is a
+# public repository and the owner must not be baked into tracked source.
+GIT_ORIGIN_REMOTE_URL="$(git remote get-url origin 2>/dev/null || true)"
+GIT_ORIGIN_REPOSITORY_SLUG="$(printf '%s' "$GIT_ORIGIN_REMOTE_URL" \
+    | sed -E 's#^git@[^:]+:##; s#^https?://[^/]+/##; s#\.git$##' || true)"
+
+VERIFY_FAILURE_COUNT=0
+
+# Check 1: Git tag exists. [GATING]
+echo "→ Check 1 [GATING]: git tag..."
+if git rev-parse "v$RELEASED_VERSION" >/dev/null 2>&1; then
+    echo "  ✓ Tag v$RELEASED_VERSION exists"
+else
+    echo "  ✗ Tag v$RELEASED_VERSION not found"
+    VERIFY_FAILURE_COUNT=$((VERIFY_FAILURE_COUNT + 1))
+fi
+
+# Check 2: GitHub release published. [GATING when reachable]
+#
+# Uses curl against the API rather than a CLI wrapper: one bounded HTTP
+# request, no subprocess tree. A transport failure is reported as
+# unverifiable rather than as a pass or a failure — an unreachable network is
+# a third state, and collapsing it into either of the other two is wrong.
+echo "→ Check 2 [GATING]: GitHub release..."
+if [[ -z "$GIT_ORIGIN_REPOSITORY_SLUG" ]]; then
+    echo "  ⚠ No origin remote — cannot identify the release to verify (unverifiable)"
+else
+    GITHUB_RELEASE_API_URL="https://api.github.com/repos/$GIT_ORIGIN_REPOSITORY_SLUG/releases/tags/v$RELEASED_VERSION"
+
+    # Deliberately NOT `curl -f`. With -f curl exits non-zero on any 4xx, so
+    # the status code written by -w and the `|| echo 000` fallback both land
+    # on stdout and concatenate into a nonsense value like "401000". Without
+    # -f, curl exits 0 for any completed HTTP exchange and the fallback fires
+    # only on a genuine transport failure, which is what it is there for.
+    #
+    # The auth header is added only when a token exists. Sending an empty
+    # Bearer header makes GitHub reject an otherwise-fine anonymous request
+    # to a public repository with 401.
+    GITHUB_API_CURL_ARGV=(-sS -o /dev/null -w '%{http_code}'
+        -H "Accept: application/vnd.github+json"
+        --max-time 15)
+    if [[ -n "${GH_TOKEN:-}" ]]; then
+        GITHUB_API_CURL_ARGV+=(-H "Authorization: Bearer ${GH_TOKEN}")
+    fi
+    GITHUB_RELEASE_HTTP_STATUS="$(curl "${GITHUB_API_CURL_ARGV[@]}" "$GITHUB_RELEASE_API_URL" 2>/dev/null || echo "000")"
+
+    case "$GITHUB_RELEASE_HTTP_STATUS" in
+        200)
+            echo "  ✓ GitHub release v$RELEASED_VERSION published ($GIT_ORIGIN_REPOSITORY_SLUG)"
+            ;;
+        404)
+            # A private repository read without a token also answers 404, so
+            # say which of the two this is rather than asserting the release
+            # is absent when the request may simply have been unauthorised.
+            if [[ -z "${GH_TOKEN:-}" ]]; then
+                echo "  ⚠ HTTP 404 with no GH_TOKEN set — the release may exist but be unreadable anonymously (unverifiable)"
+            else
+                echo "  ✗ GitHub release v$RELEASED_VERSION not found on $GIT_ORIGIN_REPOSITORY_SLUG"
+                VERIFY_FAILURE_COUNT=$((VERIFY_FAILURE_COUNT + 1))
+            fi
+            ;;
+        401 | 403)
+            echo "  ⚠ GitHub API refused the request (HTTP $GITHUB_RELEASE_HTTP_STATUS) — check GH_TOKEN; release state unverifiable"
+            ;;
+        000)
+            echo "  ⚠ Could not reach the GitHub API (transport failure or timeout) — release state unverifiable"
+            ;;
+        *)
+            echo "  ⚠ Unexpected GitHub API response (HTTP $GITHUB_RELEASE_HTTP_STATUS) — release state unverifiable"
+            ;;
+    esac
+fi
+
+# Check 3: Marketplace clone at the released version. [INFORMATIONAL]
+# A stale local clone is a local-environment problem, not a defect in the
+# release that was just published.
+echo "→ Check 3 [INFORMATIONAL]: marketplace clone version..."
+if [[ -d "$MARKETPLACE_CLONE_DIR/.git" ]]; then
+    MARKETPLACE_CLONE_VERSION="$(jq -r '.version // "unknown"' "$MARKETPLACE_CLONE_DIR/package.json" 2>/dev/null || echo "unknown")"
+    if [[ "$MARKETPLACE_CLONE_VERSION" == "$RELEASED_VERSION" ]]; then
+        echo "  ✓ Marketplace clone at v$RELEASED_VERSION"
+    else
+        echo "  ⚠ Marketplace clone at v$MARKETPLACE_CLONE_VERSION — run: mise run release:sync"
+    fi
+else
+    echo "  ⓘ No marketplace clone installed locally — nothing to check"
+fi
+
+# Check 4: Every registered plugin has a cache directory for this version.
+# [GATING when a clone exists]
+echo "→ Check 4 [GATING]: plugin cache directories..."
+MARKETPLACE_MANIFEST="$MARKETPLACE_CLONE_DIR/.claude-plugin/marketplace.json"
+if [[ ! -f "$MARKETPLACE_MANIFEST" ]]; then
+    echo "  ⓘ No marketplace manifest in the local clone — nothing to cross-validate"
+else
+    REGISTERED_PLUGIN_COUNT=0
+    while IFS= read -r registered_plugin_name; do
+        [[ -n "$registered_plugin_name" ]] || continue
+        REGISTERED_PLUGIN_COUNT=$((REGISTERED_PLUGIN_COUNT + 1))
+        if [[ ! -d "$PLUGIN_CACHE_DIR/$registered_plugin_name/$RELEASED_VERSION" ]]; then
+            echo "  ✗ $registered_plugin_name — missing cache dir: $PLUGIN_CACHE_DIR/$registered_plugin_name/$RELEASED_VERSION"
+            VERIFY_FAILURE_COUNT=$((VERIFY_FAILURE_COUNT + 1))
+        fi
+    done < <(jq -r '(.plugins // [])[].name' "$MARKETPLACE_MANIFEST" 2>/dev/null || true)
+    if [[ "$REGISTERED_PLUGIN_COUNT" -eq 0 ]]; then
+        echo "  ⓘ Marketplace registers 0 plugins — nothing to cache"
+    else
+        echo "  ✓ Checked $REGISTERED_PLUGIN_COUNT registered plugin(s) against the cache"
+    fi
+fi
+
+# Check 5: Plugin hooks manifests parse. [INFORMATIONAL]
+# Not every plugin ships hooks; a plugin without them is not a defect. This
+# reports how many were found and validated, because a count of zero and a
+# count of many are both plausible and only the number distinguishes them.
+echo "→ Check 5 [INFORMATIONAL]: plugin hooks manifests..."
+VALID_HOOKS_MANIFEST_COUNT=0
+INVALID_HOOKS_MANIFEST_COUNT=0
+for plugin_dir in "$MARKETPLACE_CLONE_DIR/plugins"/*/; do
+    [[ -d "$plugin_dir" ]] || continue
+    plugin_hooks_manifest="$plugin_dir/hooks/hooks.json"
+    [[ -f "$plugin_hooks_manifest" ]] || continue
+    if jq empty "$plugin_hooks_manifest" >/dev/null 2>&1; then
+        VALID_HOOKS_MANIFEST_COUNT=$((VALID_HOOKS_MANIFEST_COUNT + 1))
+    else
+        echo "  ⚠ Malformed JSON: $plugin_hooks_manifest"
+        INVALID_HOOKS_MANIFEST_COUNT=$((INVALID_HOOKS_MANIFEST_COUNT + 1))
+    fi
+done
+echo "  ⓘ Hooks manifests: $VALID_HOOKS_MANIFEST_COUNT valid, $INVALID_HOOKS_MANIFEST_COUNT malformed"
+
+echo ""
+if [[ "$VERIFY_FAILURE_COUNT" -gt 0 ]]; then
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  ✗ Release v$RELEASED_VERSION verification FAILED ($VERIFY_FAILURE_COUNT gating error(s))"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+    echo "  Missing local artifacts are usually fixed by: mise run release:sync"
+    echo ""
+    exit 1
+fi
+echo "═══════════════════════════════════════════════════════════"
+echo "  ✓ Release v$RELEASED_VERSION verified"
+echo "═══════════════════════════════════════════════════════════"
+echo ""

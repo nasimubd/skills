@@ -1,0 +1,18 @@
+{
+  "name": "skills",
+  "version": "0.1.0",
+  "description": "A Claude Code plugin marketplace. Every machine-specific value is read from local configuration at run time and never committed.",
+  "author": {
+    "name": "nasimubd",
+    "url": "https://github.com/nasimubd"
+  },
+  "homepage": "https://github.com/nasimubd/skills",
+  "repository": "https://github.com/nasimubd/skills",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "marketplace",
+    "plugins",
+    "skills"
+  ]
+}

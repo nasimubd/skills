@@ -1,0 +1,357 @@
+#!/usr/bin/env bash
+#MISE description="Auto-discover and run every plugins/*/[hooks/]tests/test-*.sh and .mise/tasks/tests/test-*.sh regression test. Aggregates pass/fail counts per test file, reconciles discovered against passed+failed, and emits a marketplace-wide summary. Exits non-zero if any test file fails, if the counts do not reconcile, or if discovery finds nothing. Run before cutting a release, and after editing any hook. Self-contained — no CI service required."
+#
+# test-marketplace-hook-regression-suite
+#
+# Regression tests are only worth writing if they are also findable. Tests
+# scattered under plugins/*/tests/ are invisible to anyone not already
+# grep'ing for them, so this task makes the whole corpus reachable by one
+# command:
+#
+#   mise run test-marketplace-hook-regression-suite
+#
+# Discovery is by convention, not by registration: a test placed at one of the
+# two paths below is picked up with no edit to this file. That is the point —
+# a registry would be a second place to forget.
+#
+# The task name encodes WHAT is tested (marketplace-wide), WHICH layer (hook
+# regression), and WHAT TYPE of run is aggregated (the test suite, not
+# benchmarks). Benchmarks live alongside as bench-*.sh and are deliberately NOT
+# run here: they are for manual perf investigation, not regression coverage.
+#
+# ── The three anti-false-green properties ────────────────────────────────────
+#
+# This runner reports a release gate. Every design decision below exists to
+# make it impossible for the gate to be green when the evidence is absent:
+#
+#   1. MISSING EVIDENCE IS FAILURE. A test whose exit-code sidecar was never
+#      written is counted FAILED, never skipped and never passed.
+#   2. EMPTY DISCOVERY IS FAILURE. Finding zero tests exits 1. "No tests ran"
+#      and "all tests passed" must never produce the same exit code.
+#   3. THE COUNTS MUST RECONCILE. discovered == passed + failed is asserted,
+#      not assumed. A test that fell out of aggregation fails the run.
+#
+# Do not weaken any of the three to make a run go green.
+
+set -euo pipefail
+
+# bash 5.2 replaced the & in a ${var/pat/repl} replacement string with a
+# back-reference to the match. Any script sourcing or spawning helpers under
+# this runner inherits the shell option, so it is turned off explicitly rather
+# than left to the host's bash version.
+shopt -u patsub_replacement 2>/dev/null || true
+
+# Recursion guard. A test living under .mise/tasks/tests/ is auto-discovered by
+# THIS runner, and a test that verifies the runner itself will want to invoke
+# the runner — which recurses forever without a sentinel. Any such test must
+# check this variable and skip its live-integration tier when it is set; run
+# standalone (`bash <test>`), the variable is unset and full coverage
+# exercises.
+export MARKETPLACE_HOOK_REGRESSION_SUITE_PARENT_INVOCATION_RECURSION_GUARD=1
+
+# Repository root. Prefer the value mise already resolved; fall back to the
+# script's own location so a direct `bash .mise/tasks/<this-file>` invocation
+# works identically. This file lives at <root>/.mise/tasks/, hence ../..
+REPO_ROOT="${MISE_PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Marketplace Hook Regression Suite"
+echo "═══════════════════════════════════════════════════════════"
+echo "→ Auto-discovering tests"
+echo ""
+
+# Discover test files at TWO well-known paths:
+#
+#   1. plugins/<plugin>/tests/test-*.sh
+#      plugins/<plugin>/hooks/tests/test-*.sh
+#      Per-plugin regression tests. Both depths are accepted so a plugin that
+#      ships hooks can keep its hook tests next to its hooks, while a plugin
+#      that ships none still has an obvious home for its tests.
+#
+#   2. .mise/tasks/tests/test-*.sh
+#      Repo-level infrastructure tests for the mise tasks themselves. A
+#      load-bearing task deserves regression coverage, and that coverage
+#      belongs outside any single plugin's scope.
+#
+# Sorted for stable output and reproducible test order across both paths.
+TEST_FILES=()
+while IFS= read -r test_file; do
+    [ -f "$test_file" ] && TEST_FILES+=("$test_file")
+done < <({
+    # Bounded depth is a perf property, not a stylistic one: without it, find
+    # descends into every plugin's skills/, scripts/, references/ and
+    # node_modules/. -mindepth 3 catches <plugin>/tests/<file>; -maxdepth 4
+    # catches <plugin>/hooks/tests/<file>. The -path filter keeps a same-depth
+    # non-test file (e.g. <plugin>/skills/<skill>/test-fixture.sh) out.
+    find "$REPO_ROOT/plugins" -mindepth 3 -maxdepth 4 -type f \
+         -name 'test-*.sh' -path '*/tests/*' 2>/dev/null
+    find "$REPO_ROOT/.mise/tasks/tests" -maxdepth 1 -name 'test-*.sh' -type f 2>/dev/null
+} | sort)
+
+# ANTI-FALSE-GREEN PROPERTY 2 — EMPTY DISCOVERY IS FAILURE.
+#
+# Exiting 0 here would make "the discovery glob is wrong" and "every test
+# passed" indistinguishable to every caller, including the release gate. A
+# renamed directory or a typo'd convention would then silently disarm the whole
+# suite and the release would go out green.
+#
+# A repository with no plugins yet is a legitimate state, but it is a state
+# somebody has to ACKNOWLEDGE rather than one this runner assumes. Set the
+# opt-out below and the run still announces, loudly, that it verified nothing.
+if [ "${#TEST_FILES[@]}" -eq 0 ]; then
+    echo "  Discovery paths searched:"
+    echo "    - plugins/*/tests/test-*.sh          (per-plugin tests)"
+    echo "    - plugins/*/hooks/tests/test-*.sh    (per-plugin hook tests)"
+    echo "    - .mise/tasks/tests/test-*.sh        (infrastructure mise-task tests)"
+    echo ""
+    if [ "${MARKETPLACE_HOOK_REGRESSION_SUITE_ALLOW_EMPTY_DISCOVERY:-0}" == "1" ]; then
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  ⚠  ZERO TESTS DISCOVERED — EMPTY DISCOVERY EXPLICITLY ALLOWED"
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  MARKETPLACE_HOOK_REGRESSION_SUITE_ALLOW_EMPTY_DISCOVERY=1 is set,"
+        echo "  so this run exits 0 having verified NOTHING."
+        echo ""
+        echo "  This is the bootstrap escape hatch for a marketplace with no"
+        echo "  plugins yet. It is NOT a passing test suite. Unset the variable"
+        echo "  as soon as the first plugin ships a test."
+        exit 0
+    fi
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  ✗ ZERO TESTS DISCOVERED — FAILING"
+    echo "═══════════════════════════════════════════════════════════"
+    echo "  Nothing was executed, so nothing was verified. This runner refuses"
+    echo "  to report success for an empty run: a green exit code here would be"
+    echo "  indistinguishable from a suite that actually passed."
+    echo ""
+    echo "  Either add a test at one of the paths above, or — if this"
+    echo "  repository genuinely has no plugins yet — acknowledge that"
+    echo "  explicitly for this invocation:"
+    echo ""
+    echo "    MARKETPLACE_HOOK_REGRESSION_SUITE_ALLOW_EMPTY_DISCOVERY=1 \\"
+    echo "      mise run test-marketplace-hook-regression-suite"
+    exit 1
+fi
+
+echo "→ Discovered ${#TEST_FILES[@]} test file(s)"
+echo ""
+
+# ── Parallel execution ───────────────────────────────────────────────────────
+#
+# Tests are mutually independent, so the suite's wall-clock is bounded by the
+# single longest test rather than by their sum. The lower bound is the longest
+# test: no bin-packing can beat it.
+#
+# Concurrency tool choice: GNU parallel has the better output semantics
+# (`--group` buffers per-job stdout and emits it atomically), but it is not
+# installed by default on macOS and would add a hard dependency. POSIX
+# `xargs -P` is ubiquitous but has no output grouping — which would be fatal
+# for diagnosable logs IF tests wrote to a shared stdout. That is sidestepped
+# by giving every test its OWN capture file: tests run truly concurrently, each
+# writing to a distinct path, and a sequential aggregation phase reads them
+# back in stable sort order. The lack of --group then costs nothing.
+#
+# Lane count: ADAPTIVE per host, operator-tunable via
+# MARKETPLACE_HOOK_REGRESSION_PARALLEL_LANES. Default is
+# clamp(cpu_count - 4, 4, 12).
+#
+#   Why leave 4 cores: the parent shell, mise, and the operator's editor stay
+#   responsive during the fan-out. Saturating every core makes the machine feel
+#   broken for a couple of seconds' gain.
+#   Why a floor of 4: a low-end 4-logical-core laptop would otherwise clamp to
+#   1 lane and run fully sequentially.
+#   Why a ceiling of 12: beyond roughly a dozen concurrent interpreter
+#   cold-starts the marginal speedup is eaten by process-scheduling contention,
+#   and the curve goes non-monotonic. Operators on much larger hosts can raise
+#   it explicitly.
+compute_adaptive_parallel_lane_count() {
+    local detected_host_cpu_count
+    # Portability: macOS/BSD has no nproc; Linux/GNU has no sysctl hw.ncpu.
+    # Try both, then fall back to a conservative constant.
+    detected_host_cpu_count=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 8)
+    local recommended_lane_count=$((detected_host_cpu_count - 4))
+    if [[ "$recommended_lane_count" -lt 4 ]]; then
+        recommended_lane_count=4
+    elif [[ "$recommended_lane_count" -gt 12 ]]; then
+        recommended_lane_count=12
+    fi
+    echo "$recommended_lane_count"
+}
+MARKETPLACE_HOOK_REGRESSION_PARALLEL_LANES="${MARKETPLACE_HOOK_REGRESSION_PARALLEL_LANES:-$(compute_adaptive_parallel_lane_count)}"
+
+# One results directory per run holds a .stdout, a .exit and a .elapsed_ms file
+# per test, keyed by test basename. The key must be DETERMINISTIC — a random
+# per-test suffix would leave the aggregation phase unable to find the output
+# it is supposed to read. Test basenames are unique by convention across the
+# marketplace, so the basename is the key.
+PER_RUN_TEST_OUTPUT_CAPTURE_DIRECTORY=$(mktemp -d -t marketplace-hook-regression-suite-results.XXXXXX)
+trap 'rm -rf "$PER_RUN_TEST_OUTPUT_CAPTURE_DIRECTORY"' EXIT
+
+PASSED_TEST_FILES_COUNT=0
+FAILED_TEST_FILES_COUNT=0
+FAILED_TEST_FILES_LIST=()
+
+# Phase 1 — PARALLEL FAN-OUT. Each test runs concurrently in its own bash
+# subprocess with stdout+stderr captured to a per-test file in the shared
+# results directory. The inline `bash -c` worker is deliberately tiny — no
+# shared shell functions — so nothing has to be exported across processes.
+# xargs caps concurrency at N and blocks until every test has finished.
+#
+# shellcheck disable=SC2016
+# SC2016 is a false positive here: the $1 and $2 inside the single-quoted
+# `bash -c` body are the positional args of that NESTED bash, not of the outer
+# scope. Single-quoting is REQUIRED so their expansion is deferred until xargs
+# invokes the per-test subprocess.
+#
+# BSD-vs-GNU portability hardening — `-S 16384`. macOS BSD xargs applies a
+# default `-S` (replacement-string size) limit of 255 bytes to each assembled
+# `-I {}` invocation. This corpus assembles a repo-relative path plus the
+# worker body plus the results directory into every invocation, and descriptive
+# test filenames push that past 255 bytes long before anything looks unusual —
+# at which point BSD xargs aborts with "command line cannot be assembled, too
+# long" and, without the missing-evidence rule below, the suite would report a
+# green run having executed nothing. 16 KB is comfortably above the GNU default
+# and far below ARG_MAX. GNU xargs was never affected, which is exactly why
+# this cliff stays invisible until someone runs the suite on a Mac.
+printf '%s\n' "${TEST_FILES[@]}" | \
+    xargs -S 16384 -P "$MARKETPLACE_HOOK_REGRESSION_PARALLEL_LANES" -I {} bash -c '
+        single_test_file_path="$1"
+        per_run_results_dir="$2"
+        test_basename_for_stable_lookup="$(basename "$single_test_file_path" .sh)"
+        # Per-test wall-clock to a .elapsed_ms sidecar via bash 5+
+        # $EPOCHREALTIME. The cost is sub-millisecond and forks nothing, so it
+        # is always written; the opt-in top-N-slowest summary at the end of
+        # aggregation reads these files when
+        # MARKETPLACE_HOOK_REGRESSION_SUITE_TOP_N_SLOWEST_TESTS_TO_DISPLAY=N
+        # is set. Default output is unchanged.
+        per_test_wall_clock_start_seconds="$EPOCHREALTIME"
+        if bash "$single_test_file_path" \
+            > "$per_run_results_dir/$test_basename_for_stable_lookup.stdout" 2>&1; then
+            echo 0 > "$per_run_results_dir/$test_basename_for_stable_lookup.exit"
+        else
+            echo "$?" > "$per_run_results_dir/$test_basename_for_stable_lookup.exit"
+        fi
+        per_test_wall_clock_end_seconds="$EPOCHREALTIME"
+        # Portable sub-second math via awk — no bc, no python dependency.
+        awk -v s="$per_test_wall_clock_start_seconds" \
+            -v e="$per_test_wall_clock_end_seconds" \
+            "BEGIN { printf \"%.0f\", (e - s) * 1000 }" \
+            > "$per_run_results_dir/$test_basename_for_stable_lookup.elapsed_ms"
+    ' _ {} "$PER_RUN_TEST_OUTPUT_CAPTURE_DIRECTORY"
+
+# Phase 2 — SEQUENTIAL AGGREGATION. Iterate the original sorted test list, so
+# the rendered order is deterministic and independent of which lane finished
+# first. Full output on FAIL (diagnose without re-running), last three lines on
+# PASS (a green run stays readable). Aggregation happens strictly AFTER every
+# parallel job has completed.
+for test_file in "${TEST_FILES[@]}"; do
+    relative_path="${test_file#"$REPO_ROOT"/}"
+    test_name=$(basename "$test_file" .sh)
+    test_stdout_capture_file="$PER_RUN_TEST_OUTPUT_CAPTURE_DIRECTORY/$test_name.stdout"
+    test_exit_code_file="$PER_RUN_TEST_OUTPUT_CAPTURE_DIRECTORY/$test_name.exit"
+
+    echo "─── $relative_path ───"
+
+    # ANTI-FALSE-GREEN PROPERTY 1 — MISSING EVIDENCE IS FAILURE.
+    # Defensive: if the parallel fan-out couldn't even create the per-
+    # test files (e.g. xargs aborted, disk full, results dir wiped),
+    # treat the test as FAILED rather than silently PASSing — this
+    # protects the release gate from missing-evidence false-greens.
+    if [[ ! -f "$test_exit_code_file" ]]; then
+        echo "  ✗ FILE-FAIL: $test_name (no exit-code file from parallel fan-out — likely xargs aborted before this test ran)"
+        FAILED_TEST_FILES_COUNT=$((FAILED_TEST_FILES_COUNT + 1))
+        FAILED_TEST_FILES_LIST+=("$relative_path")
+        echo ""
+        continue
+    fi
+
+    captured_exit_code=$(cat "$test_exit_code_file")
+    if [[ "$captured_exit_code" == "0" ]]; then
+        # PASS path: compact summary (last 3 lines).
+        tail -3 "$test_stdout_capture_file"
+        echo "  ✓ FILE-PASS: $test_name"
+        PASSED_TEST_FILES_COUNT=$((PASSED_TEST_FILES_COUNT + 1))
+    else
+        # FAIL path: FULL output so the operator can diagnose without
+        # re-running the test by hand.
+        cat "$test_stdout_capture_file"
+        echo "  ✗ FILE-FAIL: $test_name (exit=$captured_exit_code)"
+        FAILED_TEST_FILES_COUNT=$((FAILED_TEST_FILES_COUNT + 1))
+        FAILED_TEST_FILES_LIST+=("$relative_path")
+    fi
+    echo ""
+done
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Marketplace Hook Regression Suite — Summary"
+echo "═══════════════════════════════════════════════════════════"
+echo "  Test files discovered: ${#TEST_FILES[@]}"
+echo "  Test files PASSED:     $PASSED_TEST_FILES_COUNT"
+echo "  Test files FAILED:     $FAILED_TEST_FILES_COUNT"
+
+# ANTI-FALSE-GREEN PROPERTY 3 — THE COUNTS MUST RECONCILE.
+#
+# Printing three numbers is not the same as checking them. Every discovered
+# test must land in exactly one of the two buckets; if it does not, a test fell
+# out of aggregation somewhere between discovery and rendering and its result
+# is unknown. Unknown is not pass. This assertion is what makes the printed
+# summary evidence rather than decoration.
+RECONCILED_TEST_FILES_COUNT=$((PASSED_TEST_FILES_COUNT + FAILED_TEST_FILES_COUNT))
+if [ "$RECONCILED_TEST_FILES_COUNT" -ne "${#TEST_FILES[@]}" ]; then
+    echo ""
+    echo "  ✗ COUNT RECONCILIATION FAILED"
+    echo "    discovered=${#TEST_FILES[@]}  passed+failed=$RECONCILED_TEST_FILES_COUNT"
+    echo "    $(( ${#TEST_FILES[@]} - RECONCILED_TEST_FILES_COUNT )) test file(s) were discovered but never accounted for."
+    echo "    Their results are UNKNOWN, which this gate treats as failure."
+    exit 1
+fi
+
+if [ "$FAILED_TEST_FILES_COUNT" -gt 0 ]; then
+    echo ""
+    echo "  Failed test files:"
+    for fp in "${FAILED_TEST_FILES_LIST[@]}"; do
+        echo "    - $fp"
+    done
+    echo ""
+    echo "  Run a failing test directly to see its detailed output:"
+    echo "    bash <test-file-path>"
+    exit 1
+fi
+
+# Opt-in top-N-slowest ranking. An operator iterating on suite performance
+# otherwise has to instrument each test by hand to find out which ones dominate
+# the wall-clock. Off by default so the output stays byte-stable for the
+# release gate that parses it; opt in with
+#   MARKETPLACE_HOOK_REGRESSION_SUITE_TOP_N_SLOWEST_TESTS_TO_DISPLAY=N
+emit_top_n_slowest_tests_ranked_by_wall_clock_descending() {
+    local top_n_threshold_for_slowest_test_ranking_display="${MARKETPLACE_HOOK_REGRESSION_SUITE_TOP_N_SLOWEST_TESTS_TO_DISPLAY:-0}"
+    if [[ "$top_n_threshold_for_slowest_test_ranking_display" == "0" ]]; then
+        return 0
+    fi
+    if [[ ! -d "$PER_RUN_TEST_OUTPUT_CAPTURE_DIRECTORY" ]]; then
+        return 0
+    fi
+    # Build TAB-separated "elapsed_ms<TAB>test_basename" records from the
+    # .elapsed_ms sidecars written by the parallel worker above.
+    local elapsed_ms_sidecar_file_path test_basename elapsed_ms_value
+    local -a per_test_timing_records_for_ranking=()
+    for elapsed_ms_sidecar_file_path in "$PER_RUN_TEST_OUTPUT_CAPTURE_DIRECTORY"/*.elapsed_ms; do
+        [[ -f "$elapsed_ms_sidecar_file_path" ]] || continue
+        test_basename=$(basename "$elapsed_ms_sidecar_file_path" .elapsed_ms)
+        elapsed_ms_value=$(cat "$elapsed_ms_sidecar_file_path")
+        per_test_timing_records_for_ranking+=("${elapsed_ms_value}"$'\t'"${test_basename}")
+    done
+    if [[ "${#per_test_timing_records_for_ranking[@]}" -eq 0 ]]; then
+        return 0
+    fi
+    echo ""
+    echo "  ⧗ ─── Top ${top_n_threshold_for_slowest_test_ranking_display} slowest tests ───"
+    printf '%s\n' "${per_test_timing_records_for_ranking[@]}" \
+        | sort -rn -k1 \
+        | head -n "${top_n_threshold_for_slowest_test_ranking_display}" \
+        | awk -F'\t' '{ printf "      %2d. %6d ms  %s\n", NR, $1, $2 }'
+    echo "  ⧗ (override count via MARKETPLACE_HOOK_REGRESSION_SUITE_TOP_N_SLOWEST_TESTS_TO_DISPLAY=N)"
+}
+emit_top_n_slowest_tests_ranked_by_wall_clock_descending
+
+echo ""
+echo "  ✓ All ${#TEST_FILES[@]} marketplace hook regression test file(s) PASSED"

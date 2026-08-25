@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+#MISE description="Phase 3 of 5: sync the released version into the local Claude Code environment. Updates the marketplace clone to the new tag, populates the plugin cache with the new version while preserving older versions that live sessions still hold open, and refreshes the installed-plugins record. Run release:clean separately to prune old cache versions."
+set -euo pipefail
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  Phase 3: SYNC (marketplace clone + plugin cache)"
+echo "═══════════════════════════════════════════════════════════"
+
+# ─── Derived identity — no machine-specific literal in tracked source ──────
+# The marketplace name comes from the manifest, falling back to the checkout
+# directory name. Hardcoding it here would publish this machine's layout into
+# a public repository and would break the moment the repository is renamed.
+SOURCE_REPOSITORY_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$SOURCE_REPOSITORY_ROOT"
+
+MARKETPLACE_NAME="$(jq -r '.name // empty' .claude-plugin/marketplace.json 2>/dev/null || true)"
+if [[ -z "$MARKETPLACE_NAME" ]]; then
+    MARKETPLACE_NAME="$(basename "$SOURCE_REPOSITORY_ROOT")"
+fi
+
+MARKETPLACE_CLONE_DIR="$HOME/.claude/plugins/marketplaces/$MARKETPLACE_NAME"
+PLUGIN_CACHE_DIR="$HOME/.claude/plugins/cache/$MARKETPLACE_NAME"
+
+if [[ ! -f "package.json" ]]; then
+    echo "  ✗ package.json is absent — cannot determine the version that was just released"
+    exit 1
+fi
+RELEASED_VERSION="$(jq -r '.version // empty' package.json)"
+if [[ -z "$RELEASED_VERSION" || "$RELEASED_VERSION" == "null" ]]; then
+    echo "  ✗ package.json has no version field"
+    exit 1
+fi
+echo "Marketplace: $MARKETPLACE_NAME"
+echo "Syncing version: v$RELEASED_VERSION"
+
+# ─── Step 1: Update the marketplace clone ─────────────────────────────────
+#
+# Destructive-operation guard. When the marketplace path is a symlink that
+# resolves back to the source repository being released from — which is the
+# default during local development — then `git reset --hard` plus `git clean
+# -fd` here would wipe every uncommitted edit and untracked file in the
+# working tree. Comparing physical paths catches that case: if they are the
+# same tree, the marketplace is already on the code being released and there
+# is nothing to fetch, reset or clean.
+echo "→ Updating marketplace clone..."
+SOURCE_REPOSITORY_PHYSICAL_PATH="$(cd "$SOURCE_REPOSITORY_ROOT" && pwd -P)"
+MARKETPLACE_CLONE_PHYSICAL_PATH=""
+if [[ -d "$MARKETPLACE_CLONE_DIR" ]]; then
+    MARKETPLACE_CLONE_PHYSICAL_PATH="$(cd "$MARKETPLACE_CLONE_DIR" 2>/dev/null && pwd -P || true)"
+fi
+
+if [[ -n "$MARKETPLACE_CLONE_PHYSICAL_PATH" && "$MARKETPLACE_CLONE_PHYSICAL_PATH" == "$SOURCE_REPOSITORY_PHYSICAL_PATH" ]]; then
+    echo "  ⚠ Marketplace path resolves to the source repository"
+    echo "    Skipping fetch/reset/clean — those would discard uncommitted work."
+    echo "    The marketplace state IS the source tree; nothing to sync."
+elif [[ -d "$MARKETPLACE_CLONE_DIR/.git" ]]; then
+    git -C "$MARKETPLACE_CLONE_DIR" fetch origin --tags --quiet
+    git -C "$MARKETPLACE_CLONE_DIR" reset --hard "v$RELEASED_VERSION" --quiet 2>/dev/null \
+        || git -C "$MARKETPLACE_CLONE_DIR" reset --hard origin/main --quiet
+    git -C "$MARKETPLACE_CLONE_DIR" clean -fd --quiet
+    echo "  ✓ Marketplace clone updated to v$RELEASED_VERSION"
+else
+    echo "  ⚠ Marketplace clone not found at $MARKETPLACE_CLONE_DIR — nothing to update"
+fi
+
+# ─── Hook and command installation into settings.json: NOT PORTED ─────────
+# 2026-08-24. The reference synced hooks, commands and enabled-plugin entries
+# from the release into the operator's personal ~/.claude/settings.json.
+#
+# Not ported: plugin hooks auto-load from each plugin's own hooks.json, so
+# writing them into settings.json as well fires every hook twice — the
+# reference carried a dedicated verify check whose whole job was detecting
+# that duplication. A release task that edits an operator's personal settings
+# file is also the wrong shape: it makes releasing and configuring the same
+# irreversible action.
+
+# ─── Step 2: Populate the plugin cache ────────────────────────────────────
+#
+# Adds this version. Deliberately does NOT wipe the cache directory: a live
+# Claude Code session pins its plugin paths at startup and fails with
+# "Plugin directory does not exist" the moment its version is yanked out from
+# under it. Old versions are pruned later, and separately, by release:clean.
+echo "→ Adding v$RELEASED_VERSION to the plugin cache..."
+CACHED_PLUGIN_COUNT=0
+for plugin_source_dir in "$MARKETPLACE_CLONE_DIR/plugins"/*/; do
+    # Guard the no-match case: an unmatched glob expands to the literal
+    # pattern, which is not a directory.
+    [[ -d "$plugin_source_dir" ]] || continue
+    plugin_name="$(basename "$plugin_source_dir")"
+    plugin_cache_target="$PLUGIN_CACHE_DIR/$plugin_name/$RELEASED_VERSION"
+
+    # ${VAR:?} aborts rather than expanding to nothing if any component is
+    # unset or empty. The guards above should make that impossible; this is
+    # cheap insurance on the one `rm -rf` that runs against every plugin's
+    # cache directory on every release.
+    rm -rf "${PLUGIN_CACHE_DIR:?PLUGIN_CACHE_DIR must be set}/${plugin_name:?plugin_name must be set}/${RELEASED_VERSION:?RELEASED_VERSION must be set}"
+    mkdir -p "$plugin_cache_target"
+
+    # Copy the full plugin tree, mirroring what Claude Code's own on-demand
+    # cache does. Copying only a known subset of subdirectories leaves an
+    # empty cache directory for any plugin built differently from the ones
+    # the subset was written against, and an empty cache directory reports as
+    # "plugin not cached".
+    cp -R "${plugin_source_dir}." "$plugin_cache_target/" 2>/dev/null || true
+    CACHED_PLUGIN_COUNT=$((CACHED_PLUGIN_COUNT + 1))
+done
+echo "  ✓ Cache populated: $CACHED_PLUGIN_COUNT plugin(s) at v$RELEASED_VERSION (older versions preserved)"
+
+# ─── Step 3: Refresh the installed-plugins record ─────────────────────────
+# Entry keys are "<plugin>@<marketplace>"; only this marketplace's entries are
+# touched, so a machine carrying several marketplaces is unaffected.
+echo "→ Syncing installed_plugins.json..."
+INSTALLED_PLUGINS_RECORD="$HOME/.claude/plugins/installed_plugins.json"
+if [[ ! -f "$INSTALLED_PLUGINS_RECORD" ]]; then
+    echo "  ⚠ installed_plugins.json not found at $INSTALLED_PLUGINS_RECORD — nothing to sync"
+elif [[ "$CACHED_PLUGIN_COUNT" -eq 0 ]]; then
+    echo "  ⓘ No plugins cached this release — leaving installed_plugins.json untouched"
+else
+    INSTALLED_PLUGINS_TEMP_FILE="$(mktemp)"
+    if jq --arg v "$RELEASED_VERSION" \
+          --arg base "$PLUGIN_CACHE_DIR" \
+          --arg suffix "@$MARKETPLACE_NAME" '
+        .plugins |= with_entries(
+          if (.key | endswith($suffix)) then
+            .value[0].version = $v
+            | .value[0].installPath = ($base + "/" + (.key | split("@")[0]) + "/" + $v)
+            | .value[0].lastUpdated = (now | todate)
+          else . end
+        )
+      ' "$INSTALLED_PLUGINS_RECORD" > "$INSTALLED_PLUGINS_TEMP_FILE"; then
+        mv "$INSTALLED_PLUGINS_TEMP_FILE" "$INSTALLED_PLUGINS_RECORD"
+        echo "  ✓ installed_plugins.json synced to v$RELEASED_VERSION"
+    else
+        rm -f "$INSTALLED_PLUGINS_TEMP_FILE"
+        echo "  ⚠ Could not rewrite installed_plugins.json — left unchanged"
+    fi
+
+    # Bootstrap plugins that are registered in the marketplace manifest but
+    # absent from the installed record (a plugin added in this release).
+    MARKETPLACE_MANIFEST="$MARKETPLACE_CLONE_DIR/.claude-plugin/marketplace.json"
+    if [[ -f "$MARKETPLACE_MANIFEST" ]]; then
+        CURRENT_COMMIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo "")"
+        BOOTSTRAPPED_PLUGIN_COUNT=0
+        while IFS= read -r registered_plugin_name; do
+            [[ -n "$registered_plugin_name" ]] || continue
+            installed_record_key="${registered_plugin_name}@${MARKETPLACE_NAME}"
+            existing_entry="$(jq -r --arg k "$installed_record_key" '.plugins[$k] // "missing"' "$INSTALLED_PLUGINS_RECORD")"
+            if [[ "$existing_entry" == "missing" ]]; then
+                echo "  + Bootstrapping: $installed_record_key"
+                bootstrap_temp_file="$(mktemp)"
+                if jq --arg k "$installed_record_key" \
+                      --arg v "$RELEASED_VERSION" \
+                      --arg p "$PLUGIN_CACHE_DIR/$registered_plugin_name/$RELEASED_VERSION" \
+                      --arg sha "$CURRENT_COMMIT_SHA" '
+                    .plugins[$k] = [{
+                      "scope": "user",
+                      "installPath": $p,
+                      "version": $v,
+                      "installedAt": (now | todate),
+                      "lastUpdated": (now | todate),
+                      "gitCommitSha": $sha
+                    }]
+                  ' "$INSTALLED_PLUGINS_RECORD" > "$bootstrap_temp_file"; then
+                    mv "$bootstrap_temp_file" "$INSTALLED_PLUGINS_RECORD"
+                    BOOTSTRAPPED_PLUGIN_COUNT=$((BOOTSTRAPPED_PLUGIN_COUNT + 1))
+                else
+                    rm -f "$bootstrap_temp_file"
+                fi
+            fi
+        done < <(jq -r '(.plugins // [])[].name' "$MARKETPLACE_MANIFEST" 2>/dev/null || true)
+        if [[ "$BOOTSTRAPPED_PLUGIN_COUNT" -gt 0 ]]; then
+            echo "  + Bootstrapped $BOOTSTRAPPED_PLUGIN_COUNT new plugin(s)"
+        fi
+    fi
+fi
+
+echo ""
+echo "✓ Sync phase complete"
+echo ""

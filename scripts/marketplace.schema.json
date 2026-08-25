@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/nasimubd/skills/marketplace.schema.json",
+  "title": "Claude Code Skills Marketplace",
+  "description": "JSON Schema for this repository's .claude-plugin/marketplace.json plugin registry. additionalProperties is false at BOTH the marketplace level and the per-plugin level: a mistyped key is the failure mode this schema exists to catch, and a permissive object would let it through silently.",
+  "type": "object",
+  "required": ["name", "version", "description", "owner", "plugins"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Marketplace name"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Marketplace version (semver)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Marketplace description"
+    },
+    "owner": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "plugins": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Registered plugins. minItems is 0 because this marketplace ships empty by design — an empty registry is a valid, publishable state, not a validation failure. Flip minItems to 1 when the first plugin lands, so that a later edit which accidentally empties the array is caught rather than accepted.",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "version", "source", "category"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Plugin name (kebab-case)"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Plugin description (min 10 chars)"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "description": "Plugin version (semver)"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^\\./plugins/[a-z0-9-]+$",
+            "description": "Plugin source path (./plugins/name)"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["development", "productivity", "quality", "automation", "ai", "documentation", "devops", "documents", "enforcement", "trading", "utilities"],
+            "description": "Plugin category"
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "url": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "keywords": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "Plugin keywords for discovery"
+          },
+          "hooks": {
+            "type": "string",
+            "pattern": "^\\./plugins/[a-z0-9-]+/hooks/hooks\\.json$",
+            "description": "Optional hooks configuration path"
+          },
+          "commands": {
+            "type": "string",
+            "pattern": "^\\./plugins/[a-z0-9-]+/commands$",
+            "description": "Optional commands directory path"
+          },
+          "requires": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Required plugin dependencies"
+          },
+          "strict": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable strict validation mode"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
