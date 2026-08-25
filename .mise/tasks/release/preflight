@@ -232,9 +232,19 @@ echo "→ Check 2 [GATING]: GH_TOKEN presence and shape..."
 if [[ -z "${GH_TOKEN:-}" ]]; then
     __preflight_record_gating_failure "Check 2 (GH_TOKEN)" \
         "not set — export it, or run: eval \"\$(mise env)\""
-elif [[ ! "$GH_TOKEN" =~ ^(ghp_|github_pat_) ]]; then
+elif [[ ! "$GH_TOKEN" =~ ^(ghp_|gho_|ghu_|ghs_|github_pat_) ]]; then
+    # All five prefixes are legitimate for the API calls a release makes.
+    # `gho_` in particular is what `gh auth token` returns when the CLI is
+    # authenticated interactively, which is the most common way this variable
+    # gets populated on a developer machine. An earlier revision accepted only
+    # ghp_ and github_pat_ and rejected a perfectly valid OAuth token with
+    # "malformed" — a gate that blocks the ordinary path is worse than no gate,
+    # because the reflex it trains is to bypass it.
+    #
+    # ghp_ classic PAT · gho_ OAuth (gh CLI) · ghu_ user-to-server
+    # ghs_ server-to-server (Actions) · github_pat_ fine-grained
     __preflight_record_gating_failure "Check 2 (GH_TOKEN)" \
-        "set but malformed (${#GH_TOKEN} chars) — expected a ghp_ or github_pat_ prefix"
+        "set but unrecognised (${#GH_TOKEN} chars) — expected one of ghp_, gho_, ghu_, ghs_ or github_pat_"
 else
     echo "  ✓ [GATING] Check 2 — GH_TOKEN present and well-formed (${#GH_TOKEN} chars)"
 fi
