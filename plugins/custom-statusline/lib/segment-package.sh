@@ -89,3 +89,35 @@ compare_release_to_manifest() {
     printf 'behind'
   fi
 }
+
+segment_package() {
+  local payload_json="$1"
+  local owner repo dir
+  owner="$(printf '%s' "$payload_json" | jq -r '.workspace.repo.owner // empty')"
+  repo="$(printf '%s' "$payload_json" | jq -r '.workspace.repo.name // empty')"
+  dir="$(printf '%s' "$payload_json" | jq -r '.workspace.current_dir // .cwd // empty')"
+  [[ -n "$owner" && -n "$repo" ]] || return 0
+
+  local package_summary=""
+  package_summary="$(cache_fetch "${owner}/${repo}/package" "$CUSTOM_STATUSLINE_PACKAGE_TTL_SECONDS" \
+    fetch_repo_package_summary "$owner" "$repo")" || package_summary=""
+
+  local drift=""
+  if [[ -n "$dir" ]]; then
+    local manifest_version release_tag
+    manifest_version="$(detect_manifest_version "$dir")"
+    if [[ -n "$manifest_version" ]]; then
+      release_tag="$(cache_fetch "${owner}/${repo}/release" "$CUSTOM_STATUSLINE_RELEASE_TTL_SECONDS" \
+        fetch_latest_release_tag "$owner" "$repo")" || release_tag=""
+      [[ -n "$release_tag" ]] && drift="$(compare_release_to_manifest "$release_tag" "$manifest_version")"
+    fi
+  fi
+
+  local pieces=()
+  [[ -n "$package_summary" ]] && pieces+=("$package_summary")
+  [[ -n "$drift" ]] && pieces+=("$drift")
+  [[ "${#pieces[@]}" -gt 0 ]] || return 0
+
+  local IFS=" "
+  printf '%s' "${pieces[*]}"
+}
