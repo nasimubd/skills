@@ -22,3 +22,11 @@ counts as `+staged ~modified ?untracked` (each shown only when non-zero),
 and ahead/behind vs. the upstream as `⇡ahead ⇣behind`. Computed locally with
 `git status --porcelain` and `git rev-list --left-right --count`, no
 network. No `gh` scope required.
+
+## Release (line 2)
+
+Latest GitHub Release tag for `workspace.repo.{owner,name}`, via
+`gh api repos/{owner}/{repo}/releases/latest`. Cached for
+`CUSTOM_STATUSLINE_RELEASE_TTL_SECONDS` (default 300s). Needs the `repo`
+scope; a repo with no releases, or a `gh` call that fails for any reason,
+just omits this piece.
