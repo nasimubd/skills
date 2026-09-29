@@ -32,3 +32,16 @@ go through a shared TTL file cache so the statusline doesn't make a live
 
 Network-touching segments never error and never hang: a missing scope, a
 404, or no network at all just means that piece is omitted.
+
+## Installing it
+
+Run `/custom-statusline:install` in Claude Code, or directly:
+
+```bash
+bash plugins/custom-statusline/scripts/install.sh install
+```
+
+This backs up any existing `statusLine` configuration in
+`~/.claude/settings.json` before pointing it at this plugin. See
+`skills/install/SKILL.md` for the full walkthrough, including how to check
+status, customize which segments render, and uninstall.
