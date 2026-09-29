@@ -118,6 +118,15 @@ run_uninstall() {
   local backup_path
   backup_path="$(latest_backup_path)"
 
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    if [[ -n "$backup_path" ]]; then
+      echo "uninstall (dry-run): would restore $SETTINGS_FILE from $backup_path"
+    else
+      echo "uninstall (dry-run): no backup found — would clear statusLine instead"
+    fi
+    return 0
+  fi
+
   if [[ -n "$backup_path" ]]; then
     cp "$backup_path" "$SETTINGS_FILE"
     echo "uninstall: restored $SETTINGS_FILE from $backup_path"
