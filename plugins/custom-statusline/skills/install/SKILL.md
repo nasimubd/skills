@@ -41,3 +41,13 @@ bash "$ROOT/scripts/install.sh" status
 
 Prints the current `statusLine` command and whether it already points at
 this plugin.
+
+### 3. Customize which segments render
+
+Read `references/segments.md` for what each of the 8 segments shows and
+which `gh` scopes, if any, it needs. Segments degrade gracefully — a missing
+scope or unreachable network just omits that piece, never an error. To
+disable a segment for this user, comment out its `source` line in
+`scripts/statusline.sh` — a per-user preference edited directly, not a
+config flag (see `CLAUDE.md` for why cross-plugin config flags aren't used
+here).
