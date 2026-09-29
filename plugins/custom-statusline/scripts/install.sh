@@ -137,3 +137,9 @@ run_uninstall() {
     echo "uninstall: no backup found — cleared statusLine instead"
   fi
 }
+
+case "$ACTION" in
+  install) run_install ;;
+  uninstall) run_uninstall ;;
+  status) run_status ;;
+esac
