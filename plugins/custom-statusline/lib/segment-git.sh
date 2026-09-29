@@ -65,5 +65,17 @@ segment_git() {
   branch="$(git_current_branch "$dir")"
   [[ -n "$branch" ]] || return 0
 
-  printf '%s' "$branch"
+  local staged modified untracked
+  read -r staged modified untracked <<<"$(git_dirty_counts "$dir")"
+
+  local dirty_state=""
+  [[ "$staged" -gt 0 ]] && dirty_state+="+${staged}"
+  [[ "$modified" -gt 0 ]] && dirty_state+="~${modified}"
+  [[ "$untracked" -gt 0 ]] && dirty_state+="?${untracked}"
+
+  if [[ -n "$dirty_state" ]]; then
+    printf '%s %s' "$branch" "$dirty_state"
+  else
+    printf '%s' "$branch"
+  fi
 }
