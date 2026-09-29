@@ -33,3 +33,16 @@ fetch_latest_deployment_status() {
 
   printf '%s:%s' "$environment" "$state"
 }
+
+# Latest run of a workflow whose name matches deploy* (case-insensitive),
+# e.g. "Deploy to prod:success".
+fetch_latest_deploy_workflow_run() {
+  local owner="$1" repo="$2"
+  local runs_json
+  runs_json="$(gh api "repos/${owner}/${repo}/actions/runs?per_page=50" 2>/dev/null)" || return 1
+
+  printf '%s' "$runs_json" | jq -r \
+    '[.workflow_runs[]? | select(.name != null and (.name | ascii_downcase | startswith("deploy")))]
+     | sort_by(.run_number) | last
+     | if . == null then empty else "\(.name):\(.conclusion // .status)" end'
+}
