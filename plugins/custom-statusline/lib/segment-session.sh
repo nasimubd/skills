@@ -6,5 +6,6 @@ segment_session() {
   local payload_json="$1"
   local session_id
   session_id="$(printf '%s' "$payload_json" | jq -r '.session_id // empty')"
-  printf '%s' "$session_id"
+  [[ -n "$session_id" ]] || return 0
+  printf '%s' "${session_id:0:8}"
 }
