@@ -114,5 +114,13 @@ MALFORMED_BACKUP="$(compgen -G "${SCRATCH}.custom-statusline-backup.*")"
 assert_eq "the malformed original is preserved verbatim in the backup" \
   "{not valid json" "$(cat "$MALFORMED_BACKUP")"
 
+# unknown action prints usage and exits non-zero.
+bash "$INSTALL_SCRIPT" bogus-action >/dev/null 2>&1
+assert_eq "unknown action exits non-zero" "1" "$?"
+
+# no arguments at all prints usage and exits non-zero.
+bash "$INSTALL_SCRIPT" >/dev/null 2>&1
+assert_eq "no arguments exits non-zero" "1" "$?"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
