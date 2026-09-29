@@ -17,3 +17,10 @@ cache_path_for_key() {
   local key="$1"
   printf '%s/%s\n' "$(cache_dir)" "$(cache_key_to_filename "$key")"
 }
+
+# File modification time in epoch seconds, portable across BSD (macOS) and
+# GNU stat.
+cache_file_mtime_epoch() {
+  local path="$1"
+  stat -f '%m' "$path" 2>/dev/null || stat -c '%Y' "$path" 2>/dev/null
+}
