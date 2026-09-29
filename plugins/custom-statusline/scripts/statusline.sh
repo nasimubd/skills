@@ -46,3 +46,8 @@ LINE2="$(join_nonempty "$LINE2_GIT" "$LINE2_RELEASE")"
 
 LINE3="$(segment_context "$PAYLOAD_JSON")"
 [[ -n "$LINE3" ]] && printf '%s\n' "$LINE3"
+
+LINE4_DEPLOYMENT="$(segment_deployment "$PAYLOAD_JSON")"
+LINE4_PACKAGE="$(segment_package "$PAYLOAD_JSON")"
+LINE4="$(join_nonempty "$LINE4_DEPLOYMENT" "$LINE4_PACKAGE")"
+[[ -n "$LINE4" ]] && printf '%s\n' "$LINE4"
