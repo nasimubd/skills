@@ -65,5 +65,15 @@ BACKUP_FILE="$(compgen -G "${SCRATCH}.custom-statusline-backup.*")"
 assert_eq "backup preserves the prior command" "/prior.sh" "$(jq -r '.statusLine.command' "$BACKUP_FILE")"
 assert_eq "install preserves unrelated keys" "true" "$(jq -r '.keepMe' "$SCRATCH")"
 
+# --dry-run makes no changes and creates no backup.
+SCRATCH="$(new_scratch_settings)"
+printf '{"statusLine":{"command":"/prior.sh"}}' >"$SCRATCH"
+BEFORE_HASH="$(shasum "$SCRATCH")"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" install --dry-run >/dev/null
+AFTER_HASH="$(shasum "$SCRATCH")"
+assert_eq "dry-run install leaves settings.json byte-identical" "$BEFORE_HASH" "$AFTER_HASH"
+DRY_RUN_BACKUP_COUNT="$(compgen -G "${SCRATCH}.custom-statusline-backup.*" | wc -l | tr -d ' ')"
+assert_eq "dry-run install creates no backup" "0" "$DRY_RUN_BACKUP_COUNT"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
