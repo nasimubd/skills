@@ -6,6 +6,19 @@ set -euo pipefail
 CUSTOM_STATUSLINE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CUSTOM_STATUSLINE_PLUGIN_ROOT="$(cd "$CUSTOM_STATUSLINE_SCRIPT_DIR/.." && pwd)"
 
+# Claude Code spawns the statusLine command with a minimal PATH — not the
+# interactive shell's PATH, which is where `gh` actually lives on most
+# machines (Homebrew: /opt/homebrew/bin on Apple Silicon, /usr/local/bin on
+# Intel; Linuxbrew: /home/linuxbrew/.linuxbrew/bin). `jq` and `git` survive
+# this because macOS ships them system-wide; `gh` does not. Every release,
+# deployment, and package segment silently degrades to empty without this —
+# not an error, just quietly wrong, which is worse to debug than a crash.
+for _csl_bin_dir in /opt/homebrew/bin /usr/local/bin /home/linuxbrew/.linuxbrew/bin "$HOME/.local/bin"; do
+  [[ -d "$_csl_bin_dir" ]] && PATH="$_csl_bin_dir:$PATH"
+done
+export PATH
+unset _csl_bin_dir
+
 if ! command -v jq >/dev/null 2>&1; then
   echo "custom-statusline: jq is required but not on PATH" >&2
   exit 1

@@ -64,6 +64,19 @@ backup to find. Caught by actually running uninstall with zero backups
 present, not by reading the code. Fixed with `shopt -s nullglob` + an array,
 which expands to zero elements on no match instead of failing.
 
+## `gh` needs its PATH found for it — `jq`/`git` don't
+
+Claude Code spawns the `statusLine` command with a minimal PATH, not the
+interactive shell's. `jq` and `git` survive this because macOS ships them
+system-wide (`/usr/bin`); `gh` does not — it lives only wherever Homebrew (or
+Linuxbrew) put it. Without the PATH-hardening block at the top of
+`statusline.sh`, every segment that calls `gh` (release, deployment,
+package) degrades to silently empty in the real, live environment even
+though it works perfectly when tested from an interactive shell — which is
+exactly why this shipped once already: it was tested, and worked, under a
+normal shell's PATH. Reproduced by running the entrypoint under
+`env -i HOME="$HOME" PATH="/usr/bin:/bin" ...`, not by reasoning about it.
+
 ## The release-segment test asserts a pattern, not a frozen tag
 
 `test-segment-release.sh`'s "real repo" case calls `segment_release` against
