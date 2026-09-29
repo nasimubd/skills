@@ -38,3 +38,19 @@ git_dirty_counts() {
 
   printf '%d %d %d' "$staged" "$modified" "$untracked"
 }
+
+# Prints "ahead behind" as two space-separated counts vs. the upstream
+# branch. Prints "0 0" when there is no upstream configured — a repo with
+# no remote tracking branch isn't an error, it's just not comparable.
+git_ahead_behind() {
+  local dir="$1"
+  local counts
+  counts="$(git -C "$dir" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null)" || {
+    printf '0 0'
+    return 0
+  }
+  # rev-list prints "behind\tahead" in that order.
+  local behind ahead
+  read -r behind ahead <<<"$counts"
+  printf '%d %d' "${ahead:-0}" "${behind:-0}"
+}
