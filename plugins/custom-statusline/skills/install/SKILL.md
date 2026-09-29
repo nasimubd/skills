@@ -66,3 +66,5 @@ if none exists.
 | Issue | Cause | Solution |
 |---|---|---|
 | `jq: command not found` | `jq` isn't installed | Install it (`brew install jq`) — required by both `install.sh` and `scripts/statusline.sh` itself |
+| Status line shows nothing | `~/.claude/settings.json` wasn't reloaded | Restart the Claude Code session |
+| Deployment/package lines never appear | Repo has no GitHub Deployments/Packages, or the `gh` token lacks `read:packages` | Expected — those segments render only when there's real data; see `references/segments.md` |
