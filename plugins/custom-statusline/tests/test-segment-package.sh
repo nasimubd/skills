@@ -33,5 +33,28 @@ trap 'rm -rf "$CUSTOM_STATUSLINE_CACHE_DIR" "$MANIFEST_SCRATCH"' EXIT
 echo '{"name":"x","version":"5.6.7"}' >"$MANIFEST_SCRATCH/package.json"
 assert_eq "detects package.json version" "5.6.7" "$(detect_manifest_version "$MANIFEST_SCRATCH")"
 
+rm -f "$MANIFEST_SCRATCH/package.json"
+cat >"$MANIFEST_SCRATCH/Cargo.toml" <<'CARGO_EOF'
+[package]
+name = "x"
+version = "2.3.4"
+CARGO_EOF
+assert_eq "detects Cargo.toml version" "2.3.4" "$(detect_manifest_version "$MANIFEST_SCRATCH")"
+
+rm -f "$MANIFEST_SCRATCH/Cargo.toml"
+cat >"$MANIFEST_SCRATCH/pyproject.toml" <<'PYPROJECT_EOF'
+[project]
+name = "x"
+version = "0.9.1"
+PYPROJECT_EOF
+assert_eq "detects pyproject.toml version" "0.9.1" "$(detect_manifest_version "$MANIFEST_SCRATCH")"
+
+rm -f "$MANIFEST_SCRATCH/pyproject.toml"
+echo "3.2.1" >"$MANIFEST_SCRATCH/VERSION"
+assert_eq "detects bare VERSION file" "3.2.1" "$(detect_manifest_version "$MANIFEST_SCRATCH")"
+
+rm -f "$MANIFEST_SCRATCH/VERSION"
+assert_eq "no manifest yields empty" "" "$(detect_manifest_version "$MANIFEST_SCRATCH")"
+
 echo "test-segment-package.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
