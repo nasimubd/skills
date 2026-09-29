@@ -26,5 +26,9 @@ assert_eq "subdirectory of home" "~/skills" \
 assert_eq "path outside home is untouched" "/tmp/foo" \
   "$(segment_directory '{"cwd":"/tmp/foo"}')"
 
+LONG_SUBPATH="very/deeply/nested/project/directory/structure/goes/here"
+assert_eq "long path is middle-truncated" "~/very/deeply/neste…structure/goes/here" \
+  "$(segment_directory "{\"cwd\":\"$HOME/$LONG_SUBPATH\"}")"
+
 echo "test-segment-directory.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
