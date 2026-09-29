@@ -1,0 +1,8 @@
+{
+  "name": "custom-statusline",
+  "description": "A multi-line Claude Code status line driven entirely by the statusline JSON payload plus GitHub-derived repository signals.",
+  "author": {
+    "name": "nasimubd",
+    "url": "https://github.com/nasimubd"
+  }
+}
