@@ -99,12 +99,23 @@ run_install() {
   fi
 
   mkdir -p "$(dirname "$SETTINGS_FILE")"
+
+  # Back up whatever is really there BEFORE deciding what the base JSON is —
+  # otherwise a fresh-install stub written two lines below gets backed up as
+  # if it were a real prior config, and the "previous config backed up"
+  # message becomes misleading.
+  local backup_path=""
+  backup_path="$(backup_settings_file)"
+
   if [[ ! -f "$SETTINGS_FILE" ]]; then
     echo '{}' >"$SETTINGS_FILE"
+  elif ! jq -e . "$SETTINGS_FILE" >/dev/null 2>&1; then
+    # Malformed existing JSON: the backup above already preserved it, so
+    # self-heal by starting the patch from an empty object rather than
+    # aborting with jq's raw parse error.
+    echo "install: $SETTINGS_FILE was not valid JSON — starting fresh (original preserved in backup)" >&2
+    echo '{}' >"$SETTINGS_FILE"
   fi
-
-  local backup_path
-  backup_path="$(backup_settings_file)"
 
   local updated_json
   updated_json="$(jq --arg cmd "$STATUSLINE_SCRIPT" \
