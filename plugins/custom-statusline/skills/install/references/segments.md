@@ -45,3 +45,20 @@ when only one does, and the whole segment omitted when neither does:
 Both cached separately for `CUSTOM_STATUSLINE_DEPLOYMENT_TTL_SECONDS`
 (default 180s). Needs the `repo` scope for deployments and `workflow` (or
 `repo`) for Actions runs.
+
+## Package (line 4)
+
+Also two independent sources, same render-what-exists rule:
+
+1. GitHub Packages, as `name:versionCountv` — there's no
+   per-repository packages endpoint, so this queries the owner's org
+   packages first, falls back to iterating the user-scoped endpoint per
+   package type, then filters for a package whose `repository.full_name`
+   matches this repo. Needs `read:packages`; most repos (this one included)
+   don't publish there, so this piece is commonly absent.
+2. Release-vs-manifest drift, as `in-sync`, `ahead`, or `behind` — compares
+   the latest release tag against whichever of `package.json`,
+   `Cargo.toml`, `pyproject.toml`, or a bare `VERSION` file exists in the
+   repo root, in that priority order.
+
+Cached for `CUSTOM_STATUSLINE_PACKAGE_TTL_SECONDS` (default 600s).
