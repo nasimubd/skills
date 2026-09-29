@@ -17,4 +17,22 @@ source "$LIB_DIR/segment-release.sh"
 source "$LIB_DIR/segment-deployment.sh"
 source "$LIB_DIR/segment-package.sh"
 
+# Join non-empty arguments with " | ", skipping empty ones entirely — so a
+# missing segment collapses cleanly instead of leaving a stray separator.
+join_nonempty() {
+  local piece joined=""
+  for piece in "$@"; do
+    [[ -n "$piece" ]] || continue
+    if [[ -n "$joined" ]]; then
+      joined+=" | $piece"
+    else
+      joined="$piece"
+    fi
+  done
+  printf '%s' "$joined"
+}
+
 PAYLOAD_JSON="$(cat)"
+
+LINE1_SESSION="$(segment_session "$PAYLOAD_JSON")"
+LINE1_DIRECTORY="$(segment_directory "$PAYLOAD_JSON")"
