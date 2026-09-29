@@ -35,5 +35,13 @@ else
   PASS=$((PASS + 1))
 fi
 
+# A missing key is a miss, not an error that aborts the script.
+if cache_get "test/never-set" 60 >/dev/null 2>&1; then
+  FAIL=$((FAIL + 1))
+  echo "  ✗ missing key should miss, but cache_get succeeded"
+else
+  PASS=$((PASS + 1))
+fi
+
 echo "test-cache.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
