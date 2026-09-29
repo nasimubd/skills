@@ -51,5 +51,9 @@ INSTALLED_COMMAND="$(jq -r '.statusLine.command' "$SCRATCH")"
 assert_eq "install points statusLine at this plugin's script" \
   "$PLUGIN_ROOT/scripts/statusline.sh" "$INSTALLED_COMMAND"
 
+# status after install reports this plugin is active.
+STATUS_OUTPUT="$(CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" status)"
+assert_contains "status reports active after install" "$STATUS_OUTPUT" "is installed and active"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
