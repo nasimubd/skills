@@ -51,3 +51,28 @@ root) — the directory silently refused to be tracked. `install` sidesteps
 the collision and is also the more accurate verb per the hub CLAUDE.md's own
 glossary: this skill acquires and wires up a configuration, it doesn't
 construct anything.
+
+## `latest_backup_path` uses a nullglob array, never `ls | head`
+
+`ls -1t "$pattern" | head -1` looks equivalent but isn't under
+`set -o pipefail`: when the glob matches nothing, `ls` exits non-zero (even
+with stderr redirected away) while `head` still exits zero, and pipefail
+makes the PIPELINE's status the rightmost non-zero code — `ls`'s failure,
+not `head`'s success. Under `set -e` that silently kills `run_uninstall`
+before it prints anything, with no error message, the moment there's no
+backup to find. Caught by actually running uninstall with zero backups
+present, not by reading the code. Fixed with `shopt -s nullglob` + an array,
+which expands to zero elements on no match instead of failing.
+
+## Backup happens before the fresh-install stub is written
+
+`run_install` backs up `$SETTINGS_FILE` before deciding whether to create an
+empty `{}` stub for a first-time install. Backing up after would back up the
+stub it had just created and report it as a "previous config" that never
+existed.
+
+## Malformed existing `settings.json` self-heals rather than crashes
+
+If `$SETTINGS_FILE` exists but isn't valid JSON, `run_install` backs it up
+(preserving the original) and restarts the patch from `{}`, instead of
+letting `jq`'s raw parse error propagate through `set -e`.
