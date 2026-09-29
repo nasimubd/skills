@@ -36,3 +36,13 @@ case "$ACTION" in
     exit 1
     ;;
 esac
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+STATUSLINE_SCRIPT="$PLUGIN_ROOT/scripts/statusline.sh"
+SETTINGS_FILE="${CUSTOM_STATUSLINE_SETTINGS_FILE:-$HOME/.claude/settings.json}"
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "install.sh: jq is required but not on PATH" >&2
+  exit 1
+fi
