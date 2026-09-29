@@ -66,5 +66,7 @@ assert_eq "filters owner packages down to this repository" "skills-pkg:5v" \
   "$(fetch_repo_package_summary nasimubd skills)"
 unset -f fetch_owner_packages
 
+assert_eq "missing repo info yields empty" "" "$(segment_package '{}')"
+
 echo "test-segment-package.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
