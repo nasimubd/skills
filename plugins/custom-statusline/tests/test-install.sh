@@ -101,5 +101,18 @@ CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" uninstall --dr
 AFTER_HASH="$(shasum "$SCRATCH")"
 assert_eq "dry-run uninstall leaves settings.json byte-identical" "$BEFORE_HASH" "$AFTER_HASH"
 
+# install self-heals a malformed existing settings.json instead of crashing
+# with jq's raw parse error, and preserves the original in a backup.
+SCRATCH="$(new_scratch_settings)"
+printf '{not valid json' >"$SCRATCH"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" install >/dev/null 2>&1
+INSTALL_EXIT=$?
+assert_eq "install on malformed JSON exits successfully" "0" "$INSTALL_EXIT"
+assert_eq "install on malformed JSON still ends up valid" \
+  "$PLUGIN_ROOT/scripts/statusline.sh" "$(jq -r '.statusLine.command' "$SCRATCH")"
+MALFORMED_BACKUP="$(compgen -G "${SCRATCH}.custom-statusline-backup.*")"
+assert_eq "the malformed original is preserved verbatim in the backup" \
+  "{not valid json" "$(cat "$MALFORMED_BACKUP")"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
