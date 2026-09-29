@@ -36,5 +36,11 @@ echo "e" >"$SCRATCH_REPO/untracked.txt"
 assert_eq "dirty repo counts" "1 1 1" "$(git_dirty_counts "$SCRATCH_REPO")"
 assert_eq "dirty repo full segment" "main +1~1?1" "$(segment_git "{\"cwd\":\"$SCRATCH_REPO\"}")"
 
+assert_eq "no upstream configured" "0 0" "$(git_ahead_behind "$SCRATCH_REPO")"
+
+NON_GIT_DIR="$(mktemp -d)"
+trap 'rm -rf "$SCRATCH_REPO" "$NON_GIT_DIR"' EXIT
+assert_eq "non-git dir yields empty segment" "" "$(segment_git "{\"cwd\":\"$NON_GIT_DIR\"}")"
+
 echo "test-segment-git.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
