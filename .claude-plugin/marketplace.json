@@ -6,5 +6,18 @@
     "name": "nasimubd",
     "url": "https://github.com/nasimubd"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "custom-statusline",
+      "description": "Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals.",
+      "version": "1.0.0",
+      "source": "./plugins/custom-statusline",
+      "category": "productivity",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": ["statusline", "git", "github"]
+    }
+  ]
 }
