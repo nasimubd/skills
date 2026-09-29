@@ -60,9 +60,16 @@ backup_settings_file() {
 
 # Most recent backup for $SETTINGS_FILE, or empty if none exists.
 latest_backup_path() {
-  local pattern="${SETTINGS_FILE}.custom-statusline-backup.*"
-  # shellcheck disable=SC2086 # intentional glob, not a variable to quote
-  ls -1t $pattern 2>/dev/null | head -1
+  # nullglob so a non-matching pattern expands to zero words instead of the
+  # literal glob string; local so the shopt change doesn't leak past this
+  # function even though it isn't scoped by `local` semantics elsewhere.
+  local backups
+  shopt -s nullglob
+  backups=("${SETTINGS_FILE}".custom-statusline-backup.*)
+  shopt -u nullglob
+
+  [[ "${#backups[@]}" -gt 0 ]] || return 0
+  printf '%s\n' "${backups[@]}" | sort -r | head -1
 }
 
 run_status() {
