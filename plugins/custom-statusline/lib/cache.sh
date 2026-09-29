@@ -55,3 +55,29 @@ cache_set() {
   printf '%s' "$value" >"$tmp"
   mv "$tmp" "$path"
 }
+
+# cache_fetch <key> <ttl_seconds> <command...>
+#
+# Serve the cached value if fresh; otherwise run the command, cache stdout on
+# success, and print it. A failing command (non-zero exit) is never cached
+# and produces no output — callers treat empty output as "no data", not as
+# an error to surface.
+cache_fetch() {
+  local key="$1" ttl_seconds="$2"
+  shift 2
+
+  local cached
+  if cached="$(cache_get "$key" "$ttl_seconds")"; then
+    printf '%s' "$cached"
+    return 0
+  fi
+
+  local output
+  if output="$("$@" 2>/dev/null)"; then
+    cache_set "$key" "$output"
+    printf '%s' "$output"
+    return 0
+  fi
+
+  return 1
+}
