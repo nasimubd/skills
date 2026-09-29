@@ -46,3 +46,25 @@ fetch_latest_deploy_workflow_run() {
      | sort_by(.run_number) | last
      | if . == null then empty else "\(.name):\(.conclusion // .status)" end'
 }
+
+segment_deployment() {
+  local payload_json="$1"
+  local owner repo
+  owner="$(printf '%s' "$payload_json" | jq -r '.workspace.repo.owner // empty')"
+  repo="$(printf '%s' "$payload_json" | jq -r '.workspace.repo.name // empty')"
+  [[ -n "$owner" && -n "$repo" ]] || return 0
+
+  local deployment_status workflow_status
+  deployment_status="$(cache_fetch "${owner}/${repo}/deployment" "$CUSTOM_STATUSLINE_DEPLOYMENT_TTL_SECONDS" \
+    fetch_latest_deployment_status "$owner" "$repo")" || deployment_status=""
+  workflow_status="$(cache_fetch "${owner}/${repo}/deploy-workflow" "$CUSTOM_STATUSLINE_DEPLOYMENT_TTL_SECONDS" \
+    fetch_latest_deploy_workflow_run "$owner" "$repo")" || workflow_status=""
+
+  local pieces=()
+  [[ -n "$deployment_status" ]] && pieces+=("$deployment_status")
+  [[ -n "$workflow_status" ]] && pieces+=("$workflow_status")
+  [[ "${#pieces[@]}" -gt 0 ]] || return 0
+
+  local IFS=" "
+  printf '%s' "${pieces[*]}"
+}
