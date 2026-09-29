@@ -76,3 +76,15 @@ on stdin — no estimation, no network.
 `1h23m`, `5m`, or `42s`), cost (`$X.XX`), and net lines changed
 (`+added/-removed`, shown only when non-zero). All from `cost.*` on stdin.
 No network.
+
+## Cache TTLs at a glance
+
+| Segment | Env var | Default |
+|---|---|---|
+| Release | `CUSTOM_STATUSLINE_RELEASE_TTL_SECONDS` | 300s |
+| Deployment | `CUSTOM_STATUSLINE_DEPLOYMENT_TTL_SECONDS` | 180s |
+| Package | `CUSTOM_STATUSLINE_PACKAGE_TTL_SECONDS` | 600s |
+
+Cache files live under `CUSTOM_STATUSLINE_CACHE_DIR` (default
+`~/.cache/custom-statusline`); delete that directory to force every
+network-backed segment to re-fetch on the next render.
