@@ -68,5 +68,8 @@ unset -f fetch_owner_packages
 
 assert_eq "missing repo info yields empty" "" "$(segment_package '{}')"
 
+assert_eq "real repo, manifest in sync with release" "in-sync" \
+  "$(segment_package "{\"workspace\":{\"repo\":{\"owner\":\"nasimubd\",\"name\":\"skills\"},\"current_dir\":\"$PLUGIN_ROOT/../..\"}}")"
+
 echo "test-segment-package.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
