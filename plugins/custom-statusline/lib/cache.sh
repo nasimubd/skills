@@ -42,3 +42,16 @@ cache_get() {
 
   cat "$path"
 }
+
+# Write $2 as the cached value for key $1. Writes to a temp file and renames
+# into place so a reader never observes a half-written cache entry.
+cache_set() {
+  local key="$1" value="$2"
+  local dir path tmp
+  dir="$(cache_dir)"
+  path="$(cache_path_for_key "$key")"
+  mkdir -p "$dir"
+  tmp="$(mktemp "$dir/.tmp.XXXXXX")"
+  printf '%s' "$value" >"$tmp"
+  mv "$tmp" "$path"
+}
