@@ -83,3 +83,22 @@ run_status() {
     echo "  command: $current_command"
   fi
 }
+
+run_install() {
+  mkdir -p "$(dirname "$SETTINGS_FILE")"
+  if [[ ! -f "$SETTINGS_FILE" ]]; then
+    echo '{}' >"$SETTINGS_FILE"
+  fi
+
+  local backup_path
+  backup_path="$(backup_settings_file)"
+
+  local updated_json
+  updated_json="$(jq --arg cmd "$STATUSLINE_SCRIPT" \
+    '.statusLine = {"type": "command", "command": $cmd, "padding": 0}' \
+    "$SETTINGS_FILE")"
+  printf '%s\n' "$updated_json" >"$SETTINGS_FILE"
+
+  echo "install: statusLine now points at $STATUSLINE_SCRIPT"
+  [[ -n "$backup_path" ]] && echo "install: previous config backed up to $backup_path"
+}
