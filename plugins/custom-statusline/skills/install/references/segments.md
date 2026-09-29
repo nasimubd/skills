@@ -62,3 +62,17 @@ Also two independent sources, same render-what-exists rule:
    repo root, in that priority order.
 
 Cached for `CUSTOM_STATUSLINE_PACKAGE_TTL_SECONDS` (default 600s).
+
+## Context window (line 3)
+
+`context_window.used_percentage` rendered as a block-character bar
+(`CUSTOM_STATUSLINE_CONTEXT_BAR_WIDTH` characters wide, default 10) plus the
+raw percentage. Claude Code computes this figure itself and hands it over
+on stdin — no estimation, no network.
+
+## Model (line 5)
+
+`model.display_name` plus session duration (coarsest non-zero unit —
+`1h23m`, `5m`, or `42s`), cost (`$X.XX`), and net lines changed
+(`+added/-removed`, shown only when non-zero). All from `cost.*` on stdin.
+No network.
