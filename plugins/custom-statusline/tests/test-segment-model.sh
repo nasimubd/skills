@@ -21,5 +21,8 @@ assert_eq "1h boundary" "1h1m" "$(format_duration_ms 3660000)"
 assert_eq "minutes only" "18m" "$(format_duration_ms 1106257)"
 assert_eq "seconds only" "5s" "$(format_duration_ms 5000)"
 
+assert_eq "cost formats to 2 decimals" "\$1.89" "$(format_cost_usd "1.8851941000000003")"
+assert_eq "malformed cost degrades to zero" "\$0.00" "$(format_cost_usd "not-a-number")"
+
 echo "test-segment-model.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
