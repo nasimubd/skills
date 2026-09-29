@@ -30,3 +30,18 @@ Latest GitHub Release tag for `workspace.repo.{owner,name}`, via
 `CUSTOM_STATUSLINE_RELEASE_TTL_SECONDS` (default 300s). Needs the `repo`
 scope; a repo with no releases, or a `gh` call that fails for any reason,
 just omits this piece.
+
+## Deployment (line 4)
+
+Two independent sources, rendered together when both exist, either alone
+when only one does, and the whole segment omitted when neither does:
+
+1. The GitHub Deployments API's latest deployment, as `environment:state`
+   (e.g. `production:success`), via
+   `gh api repos/{owner}/{repo}/deployments` + its `/statuses`.
+2. The most recent Actions workflow run whose name matches `deploy*`
+   (case-insensitive), as `name:conclusion`.
+
+Both cached separately for `CUSTOM_STATUSLINE_DEPLOYMENT_TTL_SECONDS`
+(default 180s). Needs the `repo` scope for deployments and `workflow` (or
+`repo`) for Actions runs.
