@@ -83,5 +83,14 @@ CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" uninstall >/de
 RESTORED_COMMAND="$(jq -r '.statusLine.command' "$SCRATCH")"
 assert_eq "uninstall restores the prior command" "/prior.sh" "$RESTORED_COMMAND"
 
+# uninstall with no backup present clears the statusLine field instead.
+SCRATCH="$(new_scratch_settings)"
+printf '{"statusLine":{"command":"/prior.sh"},"keepMe":true}' >"$SCRATCH"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" uninstall >/dev/null
+assert_eq "uninstall with no backup clears statusLine" \
+  "null" "$(jq -r '.statusLine // "null"' "$SCRATCH")"
+assert_eq "uninstall with no backup preserves unrelated keys" \
+  "true" "$(jq -r '.keepMe' "$SCRATCH")"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
