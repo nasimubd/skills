@@ -32,3 +32,15 @@ fetch_owner_packages() {
   done
   printf '%s' "$combined"
 }
+
+# Latest version of whichever package (if any) is tied to this repository.
+fetch_repo_package_summary() {
+  local owner="$1" repo="$2"
+  local packages_json
+  packages_json="$(fetch_owner_packages "$owner")" || return 1
+
+  printf '%s' "$packages_json" | jq -r --arg full_name "${owner}/${repo}" \
+    '[.[]? | select(.repository != null and .repository.full_name == $full_name)]
+     | sort_by(.updated_at) | last
+     | if . == null then empty else "\(.name):\(.version_count // 0)v" end'
+}
