@@ -43,12 +43,6 @@ function that does this pattern (`segment-deployment.sh`,
 `segment-package.sh`) checks `if . == null then empty else ... end`
 explicitly rather than relying on field absence.
 
-## No skills yet
-
-This PR intentionally ships zero skills. The `install` skill that installs
-this statusline (patches `settings.json`, backs up the previous config) is a
-separate, stacked PR — this one is the engine only.
-
 ## The skill is named `install`, not `build`
 
 `skills/build/` collides with the root `.gitignore`'s generic `build/` rule
