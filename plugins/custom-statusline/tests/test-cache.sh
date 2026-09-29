@@ -43,5 +43,9 @@ else
   PASS=$((PASS + 1))
 fi
 
+# cache_fetch runs the command on a miss and caches stdout.
+assert_eq "cache_fetch miss runs command" "computed" "$(cache_fetch "test/fetch" 60 echo computed)"
+assert_eq "cache_fetch hit serves cache, not the command" "computed" "$(cache_fetch "test/fetch" 60 echo different)"
+
 echo "test-cache.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
