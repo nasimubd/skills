@@ -25,5 +25,16 @@ trap 'rm -rf "$SCRATCH_REPO"' EXIT
 assert_eq "clean repo, branch only" "main" "$(git_current_branch "$SCRATCH_REPO")"
 assert_eq "clean repo, no dirty state" "0 0 0" "$(git_dirty_counts "$SCRATCH_REPO")"
 
+echo "b" >"$SCRATCH_REPO/tracked.txt"
+git -C "$SCRATCH_REPO" add tracked.txt
+git -C "$SCRATCH_REPO" commit -q -m "add tracked"
+echo "c" >>"$SCRATCH_REPO/tracked.txt"
+echo "d" >"$SCRATCH_REPO/staged.txt"
+git -C "$SCRATCH_REPO" add staged.txt
+echo "e" >"$SCRATCH_REPO/untracked.txt"
+
+assert_eq "dirty repo counts" "1 1 1" "$(git_dirty_counts "$SCRATCH_REPO")"
+assert_eq "dirty repo full segment" "main +1~1?1" "$(segment_git "{\"cwd\":\"$SCRATCH_REPO\"}")"
+
 echo "test-segment-git.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
