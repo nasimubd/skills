@@ -43,3 +43,6 @@ LINE2_GIT="$(segment_git "$PAYLOAD_JSON")"
 LINE2_RELEASE="$(segment_release "$PAYLOAD_JSON")"
 LINE2="$(join_nonempty "$LINE2_GIT" "$LINE2_RELEASE")"
 [[ -n "$LINE2" ]] && printf '%s\n' "$LINE2"
+
+LINE3="$(segment_context "$PAYLOAD_JSON")"
+[[ -n "$LINE3" ]] && printf '%s\n' "$LINE3"
