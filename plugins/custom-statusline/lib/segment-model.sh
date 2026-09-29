@@ -19,6 +19,14 @@ format_duration_ms() {
   fi
 }
 
+# printf "%.2f" needs a real number; the payload always gives us one, but
+# guard against empty/non-numeric input rather than let printf error out.
+format_cost_usd() {
+  local cost="$1"
+  [[ "$cost" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { printf '$0.00'; return 0; }
+  printf '$%.2f' "$cost"
+}
+
 segment_model() {
   local payload_json="$1"
   local display_name
