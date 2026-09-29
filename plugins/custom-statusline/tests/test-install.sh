@@ -75,5 +75,13 @@ assert_eq "dry-run install leaves settings.json byte-identical" "$BEFORE_HASH" "
 DRY_RUN_BACKUP_COUNT="$(compgen -G "${SCRATCH}.custom-statusline-backup.*" | wc -l | tr -d ' ')"
 assert_eq "dry-run install creates no backup" "0" "$DRY_RUN_BACKUP_COUNT"
 
+# uninstall restores the most recent backup.
+SCRATCH="$(new_scratch_settings)"
+printf '{"statusLine":{"command":"/prior.sh"}}' >"$SCRATCH"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" install >/dev/null
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" uninstall >/dev/null
+RESTORED_COMMAND="$(jq -r '.statusLine.command' "$SCRATCH")"
+assert_eq "uninstall restores the prior command" "/prior.sh" "$RESTORED_COMMAND"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
