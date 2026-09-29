@@ -12,3 +12,8 @@ cache_key_to_filename() {
   local key="$1"
   printf '%s' "$key" | tr -c 'A-Za-z0-9._-' '_'
 }
+
+cache_path_for_key() {
+  local key="$1"
+  printf '%s/%s\n' "$(cache_dir)" "$(cache_key_to_filename "$key")"
+}
