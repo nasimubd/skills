@@ -5,6 +5,8 @@
 CUSTOM_STATUSLINE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./cache.sh
 source "$CUSTOM_STATUSLINE_LIB_DIR/cache.sh"
+# shellcheck source=./segment-release.sh
+source "$CUSTOM_STATUSLINE_LIB_DIR/segment-release.sh"
 
 CUSTOM_STATUSLINE_PACKAGE_TTL_SECONDS="${CUSTOM_STATUSLINE_PACKAGE_TTL_SECONDS:-600}"
 
