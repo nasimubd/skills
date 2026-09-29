@@ -55,5 +55,15 @@ assert_eq "install points statusLine at this plugin's script" \
 STATUS_OUTPUT="$(CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" status)"
 assert_contains "status reports active after install" "$STATUS_OUTPUT" "is installed and active"
 
+# install backs up a genuinely prior config.
+SCRATCH="$(new_scratch_settings)"
+printf '{"statusLine":{"command":"/prior.sh"},"keepMe":true}' >"$SCRATCH"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" install >/dev/null
+BACKUP_COUNT="$(compgen -G "${SCRATCH}.custom-statusline-backup.*" | wc -l | tr -d ' ')"
+assert_eq "install creates exactly one backup of a real prior config" "1" "$BACKUP_COUNT"
+BACKUP_FILE="$(compgen -G "${SCRATCH}.custom-statusline-backup.*")"
+assert_eq "backup preserves the prior command" "/prior.sh" "$(jq -r '.statusLine.command' "$BACKUP_FILE")"
+assert_eq "install preserves unrelated keys" "true" "$(jq -r '.keepMe' "$SCRATCH")"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
