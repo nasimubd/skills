@@ -1,18 +1,34 @@
 # skills
 
-A [Claude Code](https://claude.com/claude-code) plugin marketplace.
+**A [Claude Code](https://claude.com/claude-code) plugin marketplace** — skills and
+plugins you can install, and the tooling to build your own.
 
-[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/nasimubd/skills)](https://github.com/nasimubd/skills/releases)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+
+## Table of contents
+
+- [Plugins](#plugins)
+- [Installation](#installation)
+- [Repository structure](#repository-structure)
+- [Gates](#gates)
+- [For plugin developers](#for-plugin-developers)
+- [Versioning](#versioning)
+- [Contributing](#contributing)
+- [Code of Conduct](#code-of-conduct)
+- [Security](#security)
+- [License](#license)
 
 ## Plugins
 
-**None yet.** The scaffold is complete and every gate passes on an empty marketplace —
-deliberately, so the first plugin lands against working machinery rather than alongside
-it.
+`.claude-plugin/marketplace.json` is the source of truth for what plugins exist. Any
+list here is derived from it; if the two disagree, the manifest is right and this README
+is stale.
 
-When plugins exist, `.claude-plugin/marketplace.json` is the source of truth for what
-they are. Any list in this README is derived from it; if the two disagree, the manifest
-is right and the README is stale.
+| Plugin | What it does |
+|---|---|
+| [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — built from scratch from what Claude Code's own statusline payload already provides. |
 
 ## Installation
 
@@ -29,6 +45,7 @@ is right and the README is stale.
   plugin.json          # this marketplace, installable as a plugin itself
   plugins -> ../plugins
 .claude/commands/      # repository-level slash commands (the release namespace)
+.github/               # issue/PR templates
 .mise/tasks/           # runnable tasks; the release pipeline lives here
 scripts/               # gates and release tooling
 plugins/               # one directory per plugin
@@ -44,8 +61,9 @@ node scripts/validate-skill-body.mjs     # SKILL.md structural contract
 mise run release:preflight               # everything, plus tree and commit state
 ```
 
-All gates run **locally**. There is no CI and no `.github/` directory; `release:preflight`
-is the single place every check is invoked. A check that does not run there does not run.
+All gates run **locally**. There is no CI and no GitHub Actions workflow;
+`release:preflight` is the single place every check is invoked. A check that does not
+run there does not run.
 
 Each gate prints how many things it examined rather than a bare pass — "0 discovered" and
 "0 failed" are different facts, and a green tick cannot distinguish them.
@@ -98,12 +116,16 @@ is the changelog.
 
 ## Contributing
 
-1. Create a plugin under `plugins/<name>/`
-2. Add its entry to `.claude-plugin/marketplace.json`
-3. Run the gates above
-4. Commit with [Conventional Commits](https://www.conventionalcommits.org/) — short
-   subject, verbose body
-5. Open a PR; it will be squash-merged, so the PR title becomes the commit subject
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full process — plugin structure, gates
+to run, commit conventions, and the PR/squash-merge flow.
+
+## Code of Conduct
+
+This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md).
+
+## Security
+
+See [SECURITY.md](./SECURITY.md) to report a vulnerability privately.
 
 ## License
 
