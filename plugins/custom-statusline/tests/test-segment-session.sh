@@ -20,5 +20,11 @@ assert_eq() {
 assert_eq "id only" "3e83be9e" \
   "$(segment_session '{"session_id":"3e83be9e-2559-4c75-869f-a65a883d85d1"}')"
 
+assert_eq "id with name" "3e83be9e build" \
+  "$(segment_session '{"session_id":"3e83be9e-2559-4c75-869f-a65a883d85d1","session_name":"build"}')"
+
+assert_eq "missing session_id yields empty" "" \
+  "$(segment_session '{}')"
+
 echo "test-segment-session.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
