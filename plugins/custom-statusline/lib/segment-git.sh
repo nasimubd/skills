@@ -15,4 +15,5 @@ git_current_branch() {
   local short_sha
   short_sha="$(git -C "$dir" rev-parse --short -q HEAD 2>/dev/null)"
   [[ -n "$short_sha" ]] && printf 'detached:%s' "$short_sha"
+  return 0
 }
