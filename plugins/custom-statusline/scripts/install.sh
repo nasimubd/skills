@@ -102,3 +102,23 @@ run_install() {
   echo "install: statusLine now points at $STATUSLINE_SCRIPT"
   [[ -n "$backup_path" ]] && echo "install: previous config backed up to $backup_path"
 }
+
+run_uninstall() {
+  if [[ ! -f "$SETTINGS_FILE" ]]; then
+    echo "uninstall: $SETTINGS_FILE does not exist — nothing to do"
+    return 0
+  fi
+
+  local backup_path
+  backup_path="$(latest_backup_path)"
+
+  if [[ -n "$backup_path" ]]; then
+    cp "$backup_path" "$SETTINGS_FILE"
+    echo "uninstall: restored $SETTINGS_FILE from $backup_path"
+  else
+    local updated_json
+    updated_json="$(jq 'del(.statusLine)' "$SETTINGS_FILE")"
+    printf '%s\n' "$updated_json" >"$SETTINGS_FILE"
+    echo "uninstall: no backup found — cleared statusLine instead"
+  fi
+}
