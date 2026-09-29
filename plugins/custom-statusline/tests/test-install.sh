@@ -38,3 +38,11 @@ new_scratch_settings() {
   dir="$(mktemp -d)"
   printf '%s/settings.json' "$dir"
 }
+
+# status on a settings file that doesn't exist yet.
+SCRATCH="$(new_scratch_settings)"
+OUTPUT="$(CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" status)"
+assert_contains "status reports nothing installed on missing file" "$OUTPUT" "does not exist yet"
+
+echo "test-install.sh: $PASS passed, $FAIL failed"
+[[ "$FAIL" -eq 0 ]]
