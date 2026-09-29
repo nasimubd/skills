@@ -28,5 +28,10 @@ assert_eq "ahead when manifest is newer" "ahead" \
 assert_eq "behind when release is newer" "behind" \
   "$(compare_release_to_manifest "v1.1.0" "1.0.0")"
 
+MANIFEST_SCRATCH="$(mktemp -d)"
+trap 'rm -rf "$CUSTOM_STATUSLINE_CACHE_DIR" "$MANIFEST_SCRATCH"' EXIT
+echo '{"name":"x","version":"5.6.7"}' >"$MANIFEST_SCRATCH/package.json"
+assert_eq "detects package.json version" "5.6.7" "$(detect_manifest_version "$MANIFEST_SCRATCH")"
+
 echo "test-segment-package.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
