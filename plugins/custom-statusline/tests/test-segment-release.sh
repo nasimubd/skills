@@ -22,5 +22,8 @@ assert_eq() {
 
 assert_eq "missing repo info yields empty" "" "$(segment_release '{}')"
 
+assert_eq "real repo returns its published tag" "v1.0.0" \
+  "$(segment_release '{"workspace":{"repo":{"owner":"nasimubd","name":"skills"}}}')"
+
 echo "test-segment-release.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
