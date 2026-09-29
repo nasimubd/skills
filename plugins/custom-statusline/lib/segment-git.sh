@@ -54,3 +54,16 @@ git_ahead_behind() {
   read -r behind ahead <<<"$counts"
   printf '%d %d' "${ahead:-0}" "${behind:-0}"
 }
+
+segment_git() {
+  local payload_json="$1"
+  local dir
+  dir="$(printf '%s' "$payload_json" | jq -r '.workspace.current_dir // .cwd // empty')"
+  [[ -n "$dir" ]] || dir="."
+
+  local branch
+  branch="$(git_current_branch "$dir")"
+  [[ -n "$branch" ]] || return 0
+
+  printf '%s' "$branch"
+}
