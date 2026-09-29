@@ -6,6 +6,11 @@ set -euo pipefail
 CUSTOM_STATUSLINE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CUSTOM_STATUSLINE_PLUGIN_ROOT="$(cd "$CUSTOM_STATUSLINE_SCRIPT_DIR/.." && pwd)"
 
+if ! command -v jq >/dev/null 2>&1; then
+  echo "custom-statusline: jq is required but not on PATH" >&2
+  exit 1
+fi
+
 LIB_DIR="$CUSTOM_STATUSLINE_PLUGIN_ROOT/lib"
 source "$LIB_DIR/cache.sh"
 source "$LIB_DIR/segment-session.sh"
@@ -54,3 +59,10 @@ LINE4="$(join_nonempty "$LINE4_DEPLOYMENT" "$LINE4_PACKAGE")"
 
 LINE5="$(segment_model "$PAYLOAD_JSON")"
 [[ -n "$LINE5" ]] && printf '%s\n' "$LINE5"
+
+# A statusline command's exit status must always be 0 — the script's own
+# success has nothing to do with whether the LAST segment happened to be
+# empty, and without this, an empty final segment leaves `$?` at 1 (from the
+# short-circuited `[[ ]] && printf` above), which is what the last command
+# executed happens to return, not a real failure.
+exit 0
