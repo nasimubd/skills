@@ -64,6 +64,15 @@ backup to find. Caught by actually running uninstall with zero backups
 present, not by reading the code. Fixed with `shopt -s nullglob` + an array,
 which expands to zero elements on no match instead of failing.
 
+## The release-segment test asserts a pattern, not a frozen tag
+
+`test-segment-release.sh`'s "real repo" case calls `segment_release` against
+this repo's own `owner/name` to prove the live fetch path works end to end.
+Its expected value must be a semver pattern (`^v[0-9]+\.[0-9]+\.[0-9]+$`),
+never a literal tag — this repo's own latest release changes every time a
+release ships, so a literal breaks on the very next release. Caught when
+`v1.1.0` broke a test written against `v1.0.0`.
+
 ## Backup happens before the fresh-install stub is written
 
 `run_install` backs up `$SETTINGS_FILE` before deciding whether to create an

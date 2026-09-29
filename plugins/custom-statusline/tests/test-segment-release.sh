@@ -20,9 +20,24 @@ assert_eq() {
   fi
 }
 
+assert_match() {
+  local desc="$1" pattern="$2" actual="$3"
+  if [[ "$actual" =~ $pattern ]]; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    echo "  ✗ $desc: '$actual' does not match /$pattern/"
+  fi
+}
+
 assert_eq "missing repo info yields empty" "" "$(segment_release '{}')"
 
-assert_eq "real repo returns its published tag" "v1.0.0" \
+# This repo's own latest tag is a live value that changes on every release —
+# asserting a frozen literal here breaks the instant a new release ships.
+# The pattern proves the live fetch reached a real repo and returned a real
+# semver tag, without freezing it to whichever tag happened to be latest
+# when this test was written.
+assert_match "real repo returns a semver tag" '^v[0-9]+\.[0-9]+\.[0-9]+$' \
   "$(segment_release '{"workspace":{"repo":{"owner":"nasimubd","name":"skills"}}}')"
 
 # A pre-seeded cache entry for a repo that cannot possibly exist proves the
