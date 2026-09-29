@@ -23,5 +23,10 @@ assert_eq() {
 assert_eq "in-sync when versions match" "in-sync" \
   "$(compare_release_to_manifest "v1.0.0" "1.0.0")"
 
+assert_eq "ahead when manifest is newer" "ahead" \
+  "$(compare_release_to_manifest "v1.0.0" "1.1.0")"
+assert_eq "behind when release is newer" "behind" \
+  "$(compare_release_to_manifest "v1.1.0" "1.0.0")"
+
 echo "test-segment-package.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
