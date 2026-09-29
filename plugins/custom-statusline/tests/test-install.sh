@@ -1,38 +1,40 @@
 #!/usr/bin/env bash
 # Regression tests for scripts/install.sh. Every test runs against a scratch
 # settings.json under CUSTOM_STATUSLINE_SETTINGS_FILE — never the real
-# ~/.claude/settings.json.
+# ~/.claude/settings.json. Auto-discovered by
+# test-marketplace-hook-regression-suite.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INSTALL_SCRIPT="$PLUGIN_ROOT/scripts/install.sh"
 
-PASS_COUNT=0
-FAIL_COUNT=0
+PASS=0
+FAIL=0
 
 assert_eq() {
-  local description="$1" expected="$2" actual="$3"
+  local desc="$1" expected="$2" actual="$3"
   if [[ "$expected" == "$actual" ]]; then
-    PASS_COUNT=$((PASS_COUNT + 1))
+    PASS=$((PASS + 1))
   else
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-    echo "  ✗ $description"
-    echo "    expected: $expected"
-    echo "    actual:   $actual"
+    FAIL=$((FAIL + 1))
+    echo "  ✗ $desc: expected '$expected', got '$actual'"
   fi
 }
 
 assert_contains() {
-  local description="$1" haystack="$2" needle="$3"
+  local desc="$1" haystack="$2" needle="$3"
   if [[ "$haystack" == *"$needle"* ]]; then
-    PASS_COUNT=$((PASS_COUNT + 1))
+    PASS=$((PASS + 1))
   else
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-    echo "  ✗ $description"
-    echo "    expected to contain: $needle"
-    echo "    actual: $haystack"
+    FAIL=$((FAIL + 1))
+    echo "  ✗ $desc: expected to contain '$needle', got '$haystack'"
   fi
 }
 
-echo "test-install: starting"
+# Fresh scratch settings file per test, never the real one.
+new_scratch_settings() {
+  local dir
+  dir="$(mktemp -d)"
+  printf '%s/settings.json' "$dir"
+}
