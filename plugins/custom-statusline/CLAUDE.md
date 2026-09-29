@@ -45,6 +45,15 @@ explicitly rather than relying on field absence.
 
 ## No skills yet
 
-This PR intentionally ships zero skills. The `build` skill that installs
+This PR intentionally ships zero skills. The `install` skill that installs
 this statusline (patches `settings.json`, backs up the previous config) is a
 separate, stacked PR — this one is the engine only.
+
+## The skill is named `install`, not `build`
+
+`skills/build/` collides with the root `.gitignore`'s generic `build/` rule
+(it ignores a directory named `build` at any depth, not just at the repo
+root) — the directory silently refused to be tracked. `install` sidesteps
+the collision and is also the more accurate verb per the hub CLAUDE.md's own
+glossary: this skill acquires and wires up a configuration, it doesn't
+construct anything.
