@@ -33,6 +33,32 @@ fetch_owner_packages() {
   printf '%s' "$combined"
 }
 
+# Local manifest version, checked in a fixed priority order: package.json,
+# Cargo.toml, pyproject.toml, then a bare VERSION file. Prints nothing if the
+# directory has none of these.
+detect_manifest_version() {
+  local dir="$1"
+
+  if [[ -f "$dir/package.json" ]]; then
+    jq -r '.version // empty' "$dir/package.json" 2>/dev/null
+    return 0
+  fi
+  if [[ -f "$dir/Cargo.toml" ]]; then
+    sed -n '/^\[package\]/,/^\[/p' "$dir/Cargo.toml" \
+      | grep -m1 '^version' | sed -E 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/'
+    return 0
+  fi
+  if [[ -f "$dir/pyproject.toml" ]]; then
+    sed -n '/^\[project\]/,/^\[/p' "$dir/pyproject.toml" \
+      | grep -m1 '^version' | sed -E 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/'
+    return 0
+  fi
+  if [[ -f "$dir/VERSION" ]]; then
+    tr -d '[:space:]' <"$dir/VERSION"
+    return 0
+  fi
+}
+
 # Latest version of whichever package (if any) is tied to this repository.
 fetch_repo_package_summary() {
   local owner="$1" repo="$2"
