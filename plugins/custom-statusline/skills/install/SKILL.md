@@ -51,3 +51,12 @@ disable a segment for this user, comment out its `source` line in
 `scripts/statusline.sh` — a per-user preference edited directly, not a
 config flag (see `CLAUDE.md` for why cross-plugin config flags aren't used
 here).
+
+### 4. Uninstall
+
+```bash
+bash "$ROOT/scripts/install.sh" uninstall
+```
+
+Restores the most recent backup, or clears the `statusLine` field entirely
+if none exists.
