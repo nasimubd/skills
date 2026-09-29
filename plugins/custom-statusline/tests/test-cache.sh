@@ -26,5 +26,14 @@ assert_eq() {
 cache_set "test/key" "hello"
 assert_eq "fresh cache hit" "hello" "$(cache_get "test/key" 60)"
 
+# A TTL of 0 means "always stale" — cache_get must miss even right after set.
+cache_set "test/expired" "stale-value"
+if cache_get "test/expired" 0 >/dev/null 2>&1; then
+  FAIL=$((FAIL + 1))
+  echo "  ✗ ttl-0 should always miss, but cache_get succeeded"
+else
+  PASS=$((PASS + 1))
+fi
+
 echo "test-cache.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
