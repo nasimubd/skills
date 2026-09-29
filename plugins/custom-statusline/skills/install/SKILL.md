@@ -32,3 +32,12 @@ This backs up any existing `statusLine` block in `~/.claude/settings.json`
 ```bash
 bash "$ROOT/scripts/install.sh" install --dry-run
 ```
+
+### 2. Check what's active
+
+```bash
+bash "$ROOT/scripts/install.sh" status
+```
+
+Prints the current `statusLine` command and whether it already points at
+this plugin.
