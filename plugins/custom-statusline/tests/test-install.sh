@@ -44,5 +44,12 @@ SCRATCH="$(new_scratch_settings)"
 OUTPUT="$(CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" status)"
 assert_contains "status reports nothing installed on missing file" "$OUTPUT" "does not exist yet"
 
+# install against a settings file that doesn't exist yet.
+SCRATCH="$(new_scratch_settings)"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" install >/dev/null
+INSTALLED_COMMAND="$(jq -r '.statusLine.command' "$SCRATCH")"
+assert_eq "install points statusLine at this plugin's script" \
+  "$PLUGIN_ROOT/scripts/statusline.sh" "$INSTALLED_COMMAND"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
