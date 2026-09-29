@@ -1,3 +1,82 @@
+# [1.2.0](https://github.com/nasimubd/skills/compare/v1.1.0...v1.2.0) (2026-09-29)
+
+
+### Bug Fixes
+
+* **custom-statusline:** align test-install.sh with sibling tests ([12507d1](https://github.com/nasimubd/skills/commit/12507d1fcf0951ae6bb2fdfb9566fe5b54328c2f))
+
+Matches the PASS/FAIL naming and assert_eq shape the other test-*.sh files in this plugin already use, and adds a new_scratch_settings helper so every test gets its own temp file instead of sharing state.
+* **custom-statusline:** back up before stub creation, not after ([b3263da](https://github.com/nasimubd/skills/commit/b3263dacb0ec3aed2b829ff5f8b3c7eb84d3fac4))
+
+backup_settings_file ran after the fresh-install stub was already written, so a first-time install backed up the stub it had just created and reported it as a previous config. Backup now runs first, against whatever (if anything) was really there.
+* **custom-statusline:** fix latest_backup_path under pipefail ([d3733d6](https://github.com/nasimubd/skills/commit/d3733d63a6c42f38abac68668e4820f87c7aa36f))
+
+ls -1t $pattern | head -1 silently aborted the whole script whenever no backup existed: an unmatched glob makes ls exit non-zero, and set -o pipefail propagates that through head even though head itself succeeds — set -e then kills the assignment before run_uninstall prints anything. Caught by actually running uninstall with no backup present, not by reading the code.
+
+Replaced with a nullglob array expansion that returns cleanly on zero matches, sorted with sort -r instead of relying on ls -t.
+* **custom-statusline:** rename build skill to install ([6f618d9](https://github.com/nasimubd/skills/commit/6f618d97981f91743ef993752499f60b638bde79))
+
+skills/build/ collided with the root .gitignore's generic build/ rule, which ignores a directory named build at any depth and silently refused to track the file. install also better matches the hub CLAUDE.md's verb glossary: this skill acquires and wires up a configuration, it does not construct anything.
+* **custom-statusline:** stop freezing this repo's own release tag ([e4642bb](https://github.com/nasimubd/skills/commit/e4642bbd8be8f4f8ff86ba7a80b327888a49b9d4))
+
+test-segment-release.sh asserted a literal v1.0.0 as this repo's latest published tag. That value is live and changes on every release, so the assertion broke the moment v1.1.0 shipped. Assert a semver pattern instead, which still proves the live fetch reached a real repo and returned a real tag.
+
+
+### Features
+
+* **custom-statusline:** add cache staleness row and reflection ([78ab534](https://github.com/nasimubd/skills/commit/78ab534e977ad526c250b78b0f540512b368657d))
+
+Final troubleshooting row plus the mandatory Post-Execution Reflection section required by validate-skill-body.mjs.
+* **custom-statusline:** add dry-run support to install ([fd21f80](https://github.com/nasimubd/skills/commit/fd21f802cbb646c3198f546e5aa675f5809a0152))
+
+Prints what would change without touching settings.json or creating a backup.
+* **custom-statusline:** add dry-run support to uninstall ([acc3f6a](https://github.com/nasimubd/skills/commit/acc3f6a1439768e9b07dbf6960115ee4ff1ea124))
+
+Mirrors install's dry-run: reports what would happen, writes nothing.
+* **custom-statusline:** add install action core logic ([f4f2958](https://github.com/nasimubd/skills/commit/f4f2958495641554ad5bf7b67cf1e0359af00bf7))
+
+Creates settings.json if absent, backs up any existing statusLine, then patches in this plugin's command via jq.
+* **custom-statusline:** add jq troubleshooting row ([ba4a75e](https://github.com/nasimubd/skills/commit/ba4a75e653b93d789651c3ae5bdc1822267ad3a3))
+
+Missing jq is the failure both install.sh and statusline.sh hit first; call it out before the less common ones.
+* **custom-statusline:** add reload and missing-segment rows ([d984c0f](https://github.com/nasimubd/skills/commit/d984c0fe33b57595e59d2302a2e79306e987cecd))
+
+Two more common points of confusion: a stale session, and segments that correctly render nothing because there's no data.
+* **custom-statusline:** add settings.json backup helpers ([3f896fa](https://github.com/nasimubd/skills/commit/3f896fa0393d849a45adaed6041e293127f3734a))
+
+Timestamped backup before any write, plus a lookup for the most recent one so uninstall can restore it.
+* **custom-statusline:** add status action ([6f49a40](https://github.com/nasimubd/skills/commit/6f49a40672d1c6a8ab0f1f1901298b5cede79f8a))
+
+Reports whether settings.json exists, has any statusLine configured, and whether it points at this plugin.
+* **custom-statusline:** add uninstall action ([3b8387b](https://github.com/nasimubd/skills/commit/3b8387b704e2d70906ccc4bb5f499b950efe37e9))
+
+Restores the most recent backup if one exists; otherwise clears the statusLine field entirely.
+* **custom-statusline:** describe install skill's purpose ([2c29a41](https://github.com/nasimubd/skills/commit/2c29a416d14e2b66f4121d0f48c05458ce04f1d3))
+
+Sets the title to match the skill's actual verb and adds the overview section a reader hits first.
+* **custom-statusline:** dispatch parsed action to its handler ([aa609fd](https://github.com/nasimubd/skills/commit/aa609fddaceeda3e052f08f464b5c0783c8023cb))
+* **custom-statusline:** document install action in skill ([123f502](https://github.com/nasimubd/skills/commit/123f502ed572fd5cc9fac735f51a09200a624e03))
+
+The install action and its --dry-run preview.
+* **custom-statusline:** document segment customization ([0d7a94e](https://github.com/nasimubd/skills/commit/0d7a94e750ba208b555ffa87e63f50d3636761fe))
+
+Points at references/segments.md and explains disabling a segment is a direct edit, not a config flag.
+* **custom-statusline:** document status action in skill ([e71566e](https://github.com/nasimubd/skills/commit/e71566ef87d57c1f2c1b8b43067249ff567ecf10))
+
+How to check whether the statusline is currently installed.
+* **custom-statusline:** document uninstall action in skill ([dd673f6](https://github.com/nasimubd/skills/commit/dd673f6239c850594938631d951a4c409aaf2fb3))
+
+The uninstall action and its backup-restore fallback.
+* **custom-statusline:** parse action and --dry-run flag ([0a4cd72](https://github.com/nasimubd/skills/commit/0a4cd7222651c89e8f7da36a66433a89e01a2e12))
+
+Validates the action name up front so a typo fails fast with the usage message rather than falling through to unimplemented logic.
+* **custom-statusline:** resolve plugin root and settings path ([e8d6a74](https://github.com/nasimubd/skills/commit/e8d6a745157248c824ddd83a41e280eeb3270d5a))
+
+Settings path is overridable via CUSTOM_STATUSLINE_SETTINGS_FILE so tests can point it at a scratch file instead of the real ~/.claude/settings.json.
+* **custom-statusline:** scaffold install.sh with usage ([393a0f5](https://github.com/nasimubd/skills/commit/393a0f5455f3886b8baa96e2825a81ee5c1ae9e5))
+
+Shebang, strict mode, and the usage message printed on missing/bad arguments.
+
 # [1.1.0](https://github.com/nasimubd/skills/compare/v1.0.0...v1.1.0) (2026-09-29)
 
 
