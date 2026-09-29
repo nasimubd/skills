@@ -85,6 +85,12 @@ run_status() {
 }
 
 run_install() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "install (dry-run): would point statusLine at $STATUSLINE_SCRIPT"
+    [[ -f "$SETTINGS_FILE" ]] && echo "install (dry-run): would back up $SETTINGS_FILE first"
+    return 0
+  fi
+
   mkdir -p "$(dirname "$SETTINGS_FILE")"
   if [[ ! -f "$SETTINGS_FILE" ]]; then
     echo '{}' >"$SETTINGS_FILE"
