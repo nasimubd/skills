@@ -36,3 +36,5 @@ PAYLOAD_JSON="$(cat)"
 
 LINE1_SESSION="$(segment_session "$PAYLOAD_JSON")"
 LINE1_DIRECTORY="$(segment_directory "$PAYLOAD_JSON")"
+LINE1="$(join_nonempty "$LINE1_SESSION" "$LINE1_DIRECTORY")"
+[[ -n "$LINE1" ]] && printf '%s\n' "$LINE1"
