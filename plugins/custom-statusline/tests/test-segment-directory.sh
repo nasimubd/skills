@@ -20,5 +20,11 @@ assert_eq() {
 assert_eq "home dir becomes ~" "~" \
   "$(segment_directory "{\"cwd\":\"$HOME\"}")"
 
+assert_eq "subdirectory of home" "~/skills" \
+  "$(segment_directory "{\"cwd\":\"$HOME/skills\"}")"
+
+assert_eq "path outside home is untouched" "/tmp/foo" \
+  "$(segment_directory '{"cwd":"/tmp/foo"}')"
+
 echo "test-segment-directory.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
