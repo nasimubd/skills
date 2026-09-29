@@ -31,8 +31,8 @@
     },
     "plugins": {
       "type": "array",
-      "minItems": 0,
-      "description": "Registered plugins. minItems is 0 because this marketplace ships empty by design — an empty registry is a valid, publishable state, not a validation failure. Flip minItems to 1 when the first plugin lands, so that a later edit which accidentally empties the array is caught rather than accepted.",
+      "minItems": 1,
+      "description": "Registered plugins. minItems is 1 now that custom-statusline has landed, so a later edit which accidentally empties the array is caught rather than accepted.",
       "items": {
         "type": "object",
         "required": ["name", "description", "version", "source", "category"],
