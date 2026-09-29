@@ -38,6 +38,10 @@ join_nonempty() {
 }
 
 PAYLOAD_JSON="$(cat)"
+# Malformed stdin would otherwise cascade into a jq parse error from every
+# single segment that reads it. Normalize once, here, rather than let each
+# segment discover the same brokenness independently.
+printf '%s' "$PAYLOAD_JSON" | jq -e . >/dev/null 2>&1 || PAYLOAD_JSON="{}"
 
 LINE1_SESSION="$(segment_session "$PAYLOAD_JSON")"
 LINE1_DIRECTORY="$(segment_directory "$PAYLOAD_JSON")"
