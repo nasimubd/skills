@@ -56,5 +56,15 @@ assert_eq "detects bare VERSION file" "3.2.1" "$(detect_manifest_version "$MANIF
 rm -f "$MANIFEST_SCRATCH/VERSION"
 assert_eq "no manifest yields empty" "" "$(detect_manifest_version "$MANIFEST_SCRATCH")"
 
+fetch_owner_packages() {
+  echo '[
+    {"name":"other-pkg","repository":{"full_name":"nasimubd/other-repo"},"updated_at":"2026-01-01T00:00:00Z","version_count":3},
+    {"name":"skills-pkg","repository":{"full_name":"nasimubd/skills"},"updated_at":"2026-02-01T00:00:00Z","version_count":5}
+  ]'
+}
+assert_eq "filters owner packages down to this repository" "skills-pkg:5v" \
+  "$(fetch_repo_package_summary nasimubd skills)"
+unset -f fetch_owner_packages
+
 echo "test-segment-package.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
