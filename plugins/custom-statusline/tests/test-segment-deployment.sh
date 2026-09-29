@@ -22,5 +22,8 @@ assert_eq() {
 
 assert_eq "missing repo info yields empty" "" "$(segment_deployment '{}')"
 
+assert_eq "real repo with neither source omits segment" "" \
+  "$(segment_deployment '{"workspace":{"repo":{"owner":"nasimubd","name":"skills"}}}')"
+
 echo "test-segment-deployment.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
