@@ -38,3 +38,8 @@ LINE1_SESSION="$(segment_session "$PAYLOAD_JSON")"
 LINE1_DIRECTORY="$(segment_directory "$PAYLOAD_JSON")"
 LINE1="$(join_nonempty "$LINE1_SESSION" "$LINE1_DIRECTORY")"
 [[ -n "$LINE1" ]] && printf '%s\n' "$LINE1"
+
+LINE2_GIT="$(segment_git "$PAYLOAD_JSON")"
+LINE2_RELEASE="$(segment_release "$PAYLOAD_JSON")"
+LINE2="$(join_nonempty "$LINE2_GIT" "$LINE2_RELEASE")"
+[[ -n "$LINE2" ]] && printf '%s\n' "$LINE2"
