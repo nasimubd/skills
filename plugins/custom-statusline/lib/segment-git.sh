@@ -73,9 +73,14 @@ segment_git() {
   [[ "$modified" -gt 0 ]] && dirty_state+="~${modified}"
   [[ "$untracked" -gt 0 ]] && dirty_state+="?${untracked}"
 
-  if [[ -n "$dirty_state" ]]; then
-    printf '%s %s' "$branch" "$dirty_state"
-  else
-    printf '%s' "$branch"
-  fi
+  local ahead behind
+  read -r ahead behind <<<"$(git_ahead_behind "$dir")"
+  local tracking_state=""
+  [[ "$ahead" -gt 0 ]] && tracking_state+="⇡${ahead}"
+  [[ "$behind" -gt 0 ]] && tracking_state+="⇣${behind}"
+
+  local out="$branch"
+  [[ -n "$dirty_state" ]] && out+=" $dirty_state"
+  [[ -n "$tracking_state" ]] && out+=" $tracking_state"
+  printf '%s' "$out"
 }
