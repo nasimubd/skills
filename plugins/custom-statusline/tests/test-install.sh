@@ -92,5 +92,14 @@ assert_eq "uninstall with no backup clears statusLine" \
 assert_eq "uninstall with no backup preserves unrelated keys" \
   "true" "$(jq -r '.keepMe' "$SCRATCH")"
 
+# uninstall --dry-run makes no changes.
+SCRATCH="$(new_scratch_settings)"
+printf '{"statusLine":{"command":"/prior.sh"}}' >"$SCRATCH"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" install >/dev/null
+BEFORE_HASH="$(shasum "$SCRATCH")"
+CUSTOM_STATUSLINE_SETTINGS_FILE="$SCRATCH" bash "$INSTALL_SCRIPT" uninstall --dry-run >/dev/null
+AFTER_HASH="$(shasum "$SCRATCH")"
+assert_eq "dry-run uninstall leaves settings.json byte-identical" "$BEFORE_HASH" "$AFTER_HASH"
+
 echo "test-install.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
