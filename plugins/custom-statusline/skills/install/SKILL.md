@@ -60,3 +60,9 @@ bash "$ROOT/scripts/install.sh" uninstall
 
 Restores the most recent backup, or clears the `statusLine` field entirely
 if none exists.
+
+## Troubleshooting
+
+| Issue | Cause | Solution |
+|---|---|---|
+| `jq: command not found` | `jq` isn't installed | Install it (`brew install jq`) — required by both `install.sh` and `scripts/statusline.sh` itself |
