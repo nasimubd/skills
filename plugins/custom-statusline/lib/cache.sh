@@ -24,3 +24,21 @@ cache_file_mtime_epoch() {
   local path="$1"
   stat -f '%m' "$path" 2>/dev/null || stat -c '%Y' "$path" 2>/dev/null
 }
+
+# Print the cached value for $1 if it exists and is younger than $2 seconds.
+# Prints nothing and returns 1 on a miss (absent, unreadable, or expired) —
+# callers treat a miss as "go fetch", never as an error.
+cache_get() {
+  local key="$1" ttl_seconds="$2"
+  local path
+  path="$(cache_path_for_key "$key")"
+  [[ -f "$path" ]] || return 1
+
+  local mtime now age
+  mtime="$(cache_file_mtime_epoch "$path")" || return 1
+  now="$(date +%s)"
+  age=$((now - mtime))
+  [[ "$age" -lt "$ttl_seconds" ]] || return 1
+
+  cat "$path"
+}
