@@ -23,6 +23,7 @@ git -C "$SCRATCH_REPO" commit -q --allow-empty -m init
 trap 'rm -rf "$SCRATCH_REPO"' EXIT
 
 assert_eq "clean repo, branch only" "main" "$(git_current_branch "$SCRATCH_REPO")"
+assert_eq "clean repo, no dirty state" "0 0 0" "$(git_dirty_counts "$SCRATCH_REPO")"
 
 echo "test-segment-git.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
