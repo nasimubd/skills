@@ -70,3 +70,20 @@ fetch_repo_package_summary() {
      | sort_by(.updated_at) | last
      | if . == null then empty else "\(.name):\(.version_count // 0)v" end'
 }
+
+# Compare a manifest version against a "v"-prefixed release tag. Prints
+# "in-sync", "ahead" (manifest is newer than the last release — unreleased
+# work), or "behind" (a release exists that the manifest hasn't caught up
+# to — shouldn't normally happen, but is possible after a manual tag).
+compare_release_to_manifest() {
+  local release_tag="$1" manifest_version="$2"
+  local release_version="${release_tag#v}"
+
+  [[ "$release_version" == "$manifest_version" ]] && { printf 'in-sync'; return 0; }
+
+  if [[ "$(printf '%s\n%s' "$release_version" "$manifest_version" | sort -V | tail -1)" == "$manifest_version" ]]; then
+    printf 'ahead'
+  else
+    printf 'behind'
+  fi
+}
