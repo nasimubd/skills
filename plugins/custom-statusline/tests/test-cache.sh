@@ -47,5 +47,15 @@ fi
 assert_eq "cache_fetch miss runs command" "computed" "$(cache_fetch "test/fetch" 60 echo computed)"
 assert_eq "cache_fetch hit serves cache, not the command" "computed" "$(cache_fetch "test/fetch" 60 echo different)"
 
+# A failing command must not be cached, so a later successful call is not
+# blocked by a poisoned cache entry.
+if cache_fetch "test/fails" 60 false >/dev/null 2>&1; then
+  FAIL=$((FAIL + 1))
+  echo "  ✗ cache_fetch should propagate command failure"
+else
+  PASS=$((PASS + 1))
+fi
+assert_eq "failed fetch left no cache entry" "recovered" "$(cache_fetch "test/fails" 60 echo recovered)"
+
 echo "test-cache.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
