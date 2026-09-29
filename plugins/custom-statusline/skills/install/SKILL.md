@@ -68,3 +68,15 @@ if none exists.
 | `jq: command not found` | `jq` isn't installed | Install it (`brew install jq`) — required by both `install.sh` and `scripts/statusline.sh` itself |
 | Status line shows nothing | `~/.claude/settings.json` wasn't reloaded | Restart the Claude Code session |
 | Deployment/package lines never appear | Repo has no GitHub Deployments/Packages, or the `gh` token lacks `read:packages` | Expected — those segments render only when there's real data; see `references/segments.md` |
+| Release/deployment/package data looks stale | TTL cache hasn't expired yet | Lower the relevant `CUSTOM_STATUSLINE_*_TTL_SECONDS` env var, or delete `~/.cache/custom-statusline/` |
+
+## Post-Execution Reflection
+
+After this skill completes, check before closing:
+
+1. **Did the command succeed?** If not, fix the instruction that caused the failure.
+2. **Did parameters or output change?** If the underlying tool drifted, update this file.
+3. **Was a workaround needed?** If you improvised, record it so the next invocation
+   doesn't need the same improvisation.
+
+Only update if the issue is real and reproducible — not speculative.
