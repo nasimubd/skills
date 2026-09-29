@@ -64,3 +64,22 @@ latest_backup_path() {
   # shellcheck disable=SC2086 # intentional glob, not a variable to quote
   ls -1t $pattern 2>/dev/null | head -1
 }
+
+run_status() {
+  if [[ ! -f "$SETTINGS_FILE" ]]; then
+    echo "status: $SETTINGS_FILE does not exist yet — nothing installed"
+    return 0
+  fi
+
+  local current_command
+  current_command="$(jq -r '.statusLine.command // empty' "$SETTINGS_FILE" 2>/dev/null)"
+  if [[ -z "$current_command" ]]; then
+    echo "status: no statusLine configured in $SETTINGS_FILE"
+  elif [[ "$current_command" == "$STATUSLINE_SCRIPT" ]]; then
+    echo "status: custom-statusline is installed and active"
+    echo "  command: $current_command"
+  else
+    echo "status: a different statusLine is active"
+    echo "  command: $current_command"
+  fi
+}
