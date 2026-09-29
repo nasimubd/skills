@@ -46,3 +46,21 @@ if ! command -v jq >/dev/null 2>&1; then
   echo "install.sh: jq is required but not on PATH" >&2
   exit 1
 fi
+
+# Backs up $SETTINGS_FILE to a timestamped sibling before install overwrites
+# it. Returns the backup path on stdout; prints nothing (and does not fail)
+# when there's no file to back up yet.
+backup_settings_file() {
+  [[ -f "$SETTINGS_FILE" ]] || return 0
+  local backup_path
+  backup_path="${SETTINGS_FILE}.custom-statusline-backup.$(date +%Y%m%dT%H%M%S)"
+  cp "$SETTINGS_FILE" "$backup_path"
+  printf '%s' "$backup_path"
+}
+
+# Most recent backup for $SETTINGS_FILE, or empty if none exists.
+latest_backup_path() {
+  local pattern="${SETTINGS_FILE}.custom-statusline-backup.*"
+  # shellcheck disable=SC2086 # intentional glob, not a variable to quote
+  ls -1t $pattern 2>/dev/null | head -1
+}
