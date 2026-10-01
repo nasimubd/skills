@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Use when the user wants to install or configure Norn, the local-first runtime for routing tasks across tools, models, desktop automation, and approval gates. TRIGGERS - install Norn, setup Norn, configure Norn, Norn runtime
+description: Use when the user wants to install or configure Norn, the local-first task-routing runtime. TRIGGERS - install Norn, setup Norn, configure Norn, Norn runtime
 allowed-tools: Read, Bash
 ---
 
