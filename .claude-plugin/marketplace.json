@@ -18,6 +18,18 @@
         "url": "https://github.com/nasimubd"
       },
       "keywords": ["statusline", "git", "github"]
+    },
+    {
+      "name": "norn-agent",
+      "description": "Install and operate Norn, a local-first runtime for routing natural-language tasks across tools, models, desktop automation, and approval gates.",
+      "version": "1.2.0",
+      "source": "./plugins/norn-agent",
+      "category": "productivity",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": ["norn", "agent-runtime", "argus", "agent-s", "automation"]
     }
   ]
 }
