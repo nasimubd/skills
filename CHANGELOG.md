@@ -1,3 +1,67 @@
+# [1.3.0](https://github.com/nasimubd/skills/compare/v1.2.0...v1.3.0) (2026-10-01)
+
+
+### Bug Fixes
+
+* **custom-statusline:** resolve gh under a minimal PATH ([1eaa747](https://github.com/nasimubd/skills/commit/1eaa747c4490760ec25b5cff4a3500f67ad3816c)), closes [#backed](https://github.com/nasimubd/skills/issues/backed)
+
+Claude Code spawns the statusLine command with a minimal PATH, not the interactive shell's. jq and git survive this (macOS ships them system-wide); gh does not, since it lives only wherever Homebrew put
+* shorten norn setup skill description ([6b251f0](https://github.com/nasimubd/skills/commit/6b251f0099e7e00d9933f8ee5192ba02d846d703))
+
+Keep the user-facing trigger description within the marketplace skill contract while preserving discovery terms.
+
+
+### Features
+
+* add .vale integration surface ([962e86d](https://github.com/nasimubd/skills/commit/962e86de866f5ac94f5f044277e913db2984c069))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add accept integration surface ([40e8870](https://github.com/nasimubd/skills/commit/40e88706332df815e0e1ac9f6e41c8f9c8c51bce))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add CLAUDE integration surface ([e9100cc](https://github.com/nasimubd/skills/commit/e9100cc3a470addc42e14da76aa307ca493812d3))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add CLAUDE integration surface ([f1fe209](https://github.com/nasimubd/skills/commit/f1fe209930ef7d973361eea544b8a6b1856e8f98))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add doctor integration surface ([0c502ba](https://github.com/nasimubd/skills/commit/0c502ba6deacfcb2328d60cea74d46e29ca7e916))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add marketplace integration surface ([223ae87](https://github.com/nasimubd/skills/commit/223ae878cba24de51f851ea543864fe79fbd265a))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add plugin integration surface ([158ee5d](https://github.com/nasimubd/skills/commit/158ee5d66588d72712a3d200b9cd93f11397d292))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add plugin integration surface ([9df3719](https://github.com/nasimubd/skills/commit/9df37193af289544945ccb2677ca90a0d8ebc225))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add README integration surface ([df635ea](https://github.com/nasimubd/skills/commit/df635ea7a92add4867ac1d268213ea81b27d875b))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add README integration surface ([87bdaf3](https://github.com/nasimubd/skills/commit/87bdaf3f84920a27135bb269cd8343a5c699063e))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add README integration surface ([518a669](https://github.com/nasimubd/skills/commit/518a669dc200afdd21134210dab56ab64c9f938d))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add setup integration surface ([e4dff02](https://github.com/nasimubd/skills/commit/e4dff02caea9736d4dfeede46cdd224c64df846f))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add SKILL integration surface ([0a23c52](https://github.com/nasimubd/skills/commit/0a23c5270cff69d8275916a0f1eb6de6c24cc306))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add SKILL integration surface ([67d6884](https://github.com/nasimubd/skills/commit/67d68841373c9fcf8d3cb9b214d420c9df954eca))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add SKILL integration surface ([dfe9a5e](https://github.com/nasimubd/skills/commit/dfe9a5ee54f25a7ca023c7dc54d14d08226c804f))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+* add SKILL integration surface ([48a066e](https://github.com/nasimubd/skills/commit/48a066e544989d623d5596bdd9c080f822ee7cfc))
+
+Add one reviewable piece of the Norn integration while preserving the marketplace repository's provider and versioning boundaries.
+
 # [1.2.0](https://github.com/nasimubd/skills/compare/v1.1.0...v1.2.0) (2026-09-29)
 
 

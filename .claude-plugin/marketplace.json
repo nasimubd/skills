@@ -1,6 +1,6 @@
 {
   "name": "skills",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A Claude Code plugin marketplace. Every machine-specific value is read from local configuration at run time and never committed; see the repository README for the configuration contract.",
   "owner": {
     "name": "nasimubd",
@@ -10,7 +10,7 @@
     {
       "name": "custom-statusline",
       "description": "Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "./plugins/custom-statusline",
       "category": "productivity",
       "author": {
@@ -22,7 +22,7 @@
     {
       "name": "norn-agent",
       "description": "Install and operate Norn, a local-first runtime for routing natural-language tasks across tools, models, desktop automation, and approval gates.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "./plugins/norn-agent",
       "category": "productivity",
       "author": {
