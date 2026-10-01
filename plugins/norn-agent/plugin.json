@@ -1,0 +1,8 @@
+{
+  "name": "norn-agent",
+  "description": "Install and operate Norn, a local-first runtime that routes natural-language tasks across tools, models, desktop automation, and approval gates.",
+  "author": {
+    "name": "nasimubd",
+    "url": "https://github.com/nasimubd"
+  }
+}
