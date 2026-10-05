@@ -22,14 +22,14 @@ assert_exit_zero "empty payload" "{}"
 assert_exit_zero "malformed payload" "not json"
 assert_exit_zero "empty stdin" ""
 
-FULL_PAYLOAD='{"session_id":"3e83be9e-2559-4c75-869f-a65a883d85d1","model":{"display_name":"Sonnet 5"},"context_window":{"used_percentage":42},"cost":{"total_cost_usd":1.5,"total_duration_ms":60000}}'
+FULL_PAYLOAD='{"session_id":"3e83be9e-2559-4c75-869f-a65a883d85d1","model":{"display_name":"Sonnet 5"},"context_window":{"total_input_tokens":42000,"context_window_size":100000},"cost":{"total_cost_usd":1.5,"total_duration_ms":60000}}'
 OUTPUT="$(printf '%s' "$FULL_PAYLOAD" | bash "$PLUGIN_ROOT/scripts/statusline.sh")"
 
-if [[ "$OUTPUT" == *"3e83be9e"* ]]; then
+if [[ "$OUTPUT" == *"~/skills"* ]]; then
   PASS=$((PASS + 1))
 else
   FAIL=$((FAIL + 1))
-  echo "  ✗ output missing session id: $OUTPUT"
+  echo "  ✗ output missing repository path: $OUTPUT"
 fi
 
 if [[ "$OUTPUT" == *"Sonnet 5"* ]]; then

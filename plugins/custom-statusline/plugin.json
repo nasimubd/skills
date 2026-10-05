@@ -1,6 +1,6 @@
 {
   "name": "custom-statusline",
-  "description": "A multi-line Claude Code status line driven entirely by the statusline JSON payload plus GitHub-derived repository signals.",
+  "description": "A cross-platform custom status line with a Claude Code renderer and native Codex TUI footer adapter.",
   "author": {
     "name": "nasimubd",
     "url": "https://github.com/nasimubd"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Custom Status Line"
+  short_description: "Configure the native Claude Code or Codex status line"
+  default_prompt: "Configure the custom status line for this host and verify it."

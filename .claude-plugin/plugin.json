@@ -1,7 +1,7 @@
 {
   "name": "skills",
   "version": "1.2.0",
-  "description": "A Claude Code plugin marketplace. Every machine-specific value is read from local configuration at run time and never committed.",
+  "description": "A cross-platform Agent Skills marketplace for Claude Code and Codex. Every machine-specific value is read from local configuration at run time and never committed.",
   "author": {
     "name": "nasimubd",
     "url": "https://github.com/nasimubd"

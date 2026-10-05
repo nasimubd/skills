@@ -1,7 +1,7 @@
 {
   "name": "skills",
   "version": "1.2.0",
-  "description": "A Claude Code plugin marketplace. Every machine-specific value is read from local configuration at run time and never committed; see the repository README for the configuration contract.",
+  "description": "A cross-platform Agent Skills marketplace for Claude Code and Codex. Every machine-specific value is read from local configuration at run time and never committed; see the repository README for the configuration contract.",
   "owner": {
     "name": "nasimubd",
     "url": "https://github.com/nasimubd"
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "custom-statusline",
-      "description": "Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals.",
+      "description": "Multi-platform custom status line: a Claude Code renderer plus a native Codex TUI footer adapter.",
       "version": "1.2.0",
       "source": "./plugins/custom-statusline",
       "category": "productivity",

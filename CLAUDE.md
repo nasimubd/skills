@@ -1,8 +1,7 @@
 # skills — repository hub
 
-A [Claude Code](https://claude.com/claude-code) plugin marketplace. One home for every
-plugin its maintainer builds, distributed through a single manifest and gated by a
-single command.
+A platform-agnostic Agent Skills repository with Claude Code and Codex adapters. One
+home for canonical skills, Claude plugins, and host-specific configuration tooling.
 
 **Architecture**: hub-and-spoke with progressive disclosure.
 
@@ -28,9 +27,11 @@ describe. A stale doc is a defect, not a chore.
 | Spoke | [docs/CLAUDE.md](./docs/CLAUDE.md) | Documentation standards, ADR conventions |
 | Deep | `plugins/<name>/CLAUDE.md` | Per-plugin invariants — the maintainer's SSoT |
 
-There are currently **no plugins**. The scaffold is complete and every gate passes on
-an empty marketplace; that is deliberate, so the first plugin lands against working
-machinery rather than alongside it.
+The repository currently contains one Claude plugin, `custom-statusline`, plus a
+portable status-line skill exposed to Codex through `.agents/skills/`.
+
+The portable layer lives under `skills/`. Claude plugin directories and Codex discovery
+links are adapters around that layer; they must not fork the canonical skill body.
 
 ## Plugin discovery
 
@@ -83,6 +84,7 @@ The git tag is `v<version>`.
 node scripts/validate-plugins.mjs        # manifests, schema, paths, deps, skills
 node scripts/check-version-equality.mjs  # the version lockstep actually holds
 node scripts/validate-skill-body.mjs     # SKILL.md structural contract
+node scripts/validate-agent-skills.mjs   # portable Agent Skills contract
 mise run release:preflight               # all of the above, plus tree and commit state
 ```
 
