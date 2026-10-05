@@ -1,0 +1,50 @@
+version: 1
+id: open-source-review
+purpose: Review an open-source skill, project, or implementation as a reproducible engineering asset.
+default_mode: read_only
+source_of_truth:
+  registry_root: docs/open-source-stack
+  spoke_root: docs/open-source-stack/projects/<project-slug>
+required_artifacts:
+  - project.yaml
+  - README.md
+  - reviews.jsonl
+  - evidence/<review-id>/
+steps:
+  - id: create_spoke
+    name: Create a project spoke
+    required: [project.yaml, README.md, reviews.jsonl, evidence_directory]
+  - id: inspect_upstream
+    name: Inspect upstream read-only
+    required: [canonical_url, vcs, reviewed_ref, reviewed_commit, retrieved_at, version, license]
+  - id: assess
+    name: Assess the project
+    required: [purpose, capabilities, use_cases, architecture, security, license_obligations, dependencies, maintenance, documentation, tests, telemetry, alternatives]
+  - id: capture_evidence
+    name: Capture evidence
+    required: [commands, tool_versions, source_links, findings]
+    prohibited: [credentials, secrets, raw_private_transcripts]
+  - id: append_event
+    name: Append an immutable review event
+    required: [stable_id, reviewer, reviewed_commit, reviewed_at, tools, commands, evidence, findings, decision]
+    mutation: append_only
+  - id: classify
+    name: Classify lifecycle status
+    allowed: [discovered, reviewed, approved, piloted, adopted, deprecated, archived]
+  - id: apply_standards
+    name: Apply standards and automation
+    standards: [SPDX, CycloneDX, PURL, VEX, SLSA, in-toto, Sigstore, OpenSSF Scorecard]
+    tools: [ORT, Dependency-Track, GUAC]
+  - id: make_reproducible
+    name: Convert adopted capability into a reproducible skill
+    required: [pinned_version, setup, configuration, usage, outputs, telemetry_policy, provenance_link, validation, rollback]
+  - id: decide_backstage
+    name: Decide whether Backstage is warranted
+    trigger: [catalog_scale, ownership_complexity, discovery_friction, cross_team_consumption]
+    rule: Backstage complements Git spokes, JSONL history, SBOMs, and provenance; it does not replace them.
+completion:
+  requires_all_steps: true
+  requires_resolved_commit: true
+  requires_parseable_jsonl: true
+  requires_existing_evidence_paths: true
+  requires_no_secrets: true
