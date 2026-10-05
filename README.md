@@ -1,7 +1,7 @@
 # skills
 
-**Platform-agnostic agent skills with Claude Code and Codex adapters** — reusable
-skills, plugins, and the tooling to build and verify your own.
+**A [Claude Code](https://claude.com/claude-code) plugin marketplace** — skills and
+plugins you can install, and the tooling to build your own.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/nasimubd/skills)](https://github.com/nasimubd/skills/releases)
@@ -28,20 +28,18 @@ is stale.
 
 | Plugin | What it does |
 |---|---|
-| [`custom-statusline`](./plugins/custom-statusline) | Cross-platform custom status line: a Claude Code renderer that follows the reference template and a native Codex TUI footer adapter. |
+| [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — built from scratch from what Claude Code's own statusline payload already provides. |
+| [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing tasks across deterministic tools, decision models, Argus, Agent-S, and human approval. |
+
+The repository also includes a Codex-compatible package under
+[`codex-plugins/norn-agent`](./codex-plugins/norn-agent). Both integrations use
+the same external [Norn runtime](https://github.com/nasimubd/norn).
 
 ## Installation
 
 ```
 /plugin marketplace add nasimubd/skills
 /plugin install <plugin>@skills
-```
-
-Codex discovers the shared skill through `.agents/skills/`. To configure its
-native footer directly:
-
-```bash
-bash skills/custom-statusline/scripts/configure-codex-statusline.sh install
 ```
 
 ## Repository structure
@@ -56,8 +54,7 @@ bash skills/custom-statusline/scripts/configure-codex-statusline.sh install
 .mise/tasks/           # runnable tasks; the release pipeline lives here
 scripts/               # gates and release tooling
 plugins/               # one directory per plugin
-skills/                # canonical Agent Skills shared by supported hosts
-.agents/skills/        # Codex repository-discovery links to skills/
+codex-plugins/         # Codex-compatible plugin packages
 docs/                  # ADRs, design specs, release workflow
 ```
 
@@ -67,7 +64,6 @@ docs/                  # ADRs, design specs, release workflow
 node scripts/validate-plugins.mjs        # manifests, schema, paths, dependencies
 node scripts/check-version-equality.mjs  # the version lockstep actually holds
 node scripts/validate-skill-body.mjs     # SKILL.md structural contract
-node scripts/validate-agent-skills.mjs   # portable Agent Skills contract
 mise run release:preflight               # everything, plus tree and commit state
 ```
 

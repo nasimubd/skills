@@ -1,0 +1,19 @@
+{
+  "name": "norn-agent",
+  "version": "0.1.0",
+  "description": "Codex integration for Norn, a local-first runtime for routing natural-language tasks across tools, models, desktop automation, and approval gates.",
+  "author": {
+    "name": "nasimubd",
+    "url": "https://github.com/nasimubd"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Norn Agent",
+    "shortDescription": "Use Norn Agent in Codex.",
+    "longDescription": "Norn Agent installs and operates the external Norn runtime without bundling provider credentials or model weights.",
+    "developerName": "nasimubd",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Help me use Norn Agent."
+  }
+}
