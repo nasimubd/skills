@@ -1,0 +1,26 @@
+name: logo-design-skill
+upstream_url: https://github.com/kaankiziltug/logo-design-skill.git
+vcs: git
+reviewed_ref: main
+reviewed_commit: 0ecf52e9a4b3ac92b714f7cc6e3148ab8c774134
+retrieved_at: '2026-10-05T00:00:00Z'
+license_spdx: MIT
+purl: pkg:github/kaankiziltug/logo-design-skill
+status: reviewed
+owner: digital-agency-branding
+capabilities:
+  - logo discovery and identity brief
+  - concept generation and checkpoint presentation
+  - SVG construction and audit
+  - logo testing at multiple sizes and contexts
+  - color, typography, lockups, guidelines, and export variants
+  - client presentation boards and mockups
+codex_compatibility:
+  format: Agent Skills
+  supported: true
+  claude_plugin_required: false
+  runtime: Python 3
+  dependencies: dependency-free scripts plus optional renderers
+telemetry:
+  upstream_emits: none observed in source review
+  policy: document any renderer or external service telemetry before client use
