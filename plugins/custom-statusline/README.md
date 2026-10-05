@@ -1,7 +1,8 @@
 # custom-statusline
 
-A multi-line Claude Code status line built from the statusline JSON payload
-and a handful of GitHub-derived repository signals.
+A cross-platform custom status line: Claude Code renders the reference template from its JSON payload, while Codex uses its native TUI footer
+and a handful of GitHub-derived repository signals, paired with a
+platform-neutral Agent Skill and native Codex footer adapter.
 
 ## What it shows
 
@@ -45,3 +46,6 @@ This backs up any existing `statusLine` configuration in
 `~/.claude/settings.json` before pointing it at this plugin. See
 `skills/install/SKILL.md` for the full walkthrough, including how to check
 status, customize which segments render, and uninstall.
+
+Codex uses its native TUI footer rather than Claude Code's command-backed `statusLine`; it supports the closest equivalent built-in items (directory, branch, model, and context). The shared skill is available at `../../skills/custom-statusline/`
+and is linked into `.agents/skills/` for repository-local Codex discovery.

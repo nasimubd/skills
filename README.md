@@ -28,7 +28,7 @@ is stale.
 
 | Plugin | What it does |
 |---|---|
-| [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — built from scratch from what Claude Code's own statusline payload already provides. |
+| [`custom-statusline`](./plugins/custom-statusline) | Cross-platform Claude Code renderer and native Codex footer adapter. | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — built from scratch from what Claude Code's own statusline payload already provides. |
 | [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing tasks across deterministic tools, decision models, Argus, Agent-S, and human approval. |
 
 The repository also includes a Codex-compatible package under
