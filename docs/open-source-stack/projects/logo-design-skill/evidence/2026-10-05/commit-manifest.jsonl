@@ -1,1 +1,90 @@
 {"sequence":1,"focus":"project manifest, agency review, evidence, Codex wrapper"}
+{"sequence":2,"focus":"upstream identity"}
+{"sequence":3,"focus":"license assessment"}
+{"sequence":4,"focus":"Codex compatibility"}
+{"sequence":5,"focus":"Python runtime"}
+{"sequence":6,"focus":"client brief"}
+{"sequence":7,"focus":"confidentiality"}
+{"sequence":8,"focus":"project isolation"}
+{"sequence":9,"focus":"provenance pin"}
+{"sequence":10,"focus":"asset manifest"}
+{"sequence":11,"focus":"discovery phase"}
+{"sequence":12,"focus":"category research"}
+{"sequence":13,"focus":"word mapping"}
+{"sequence":14,"focus":"mark type diversity"}
+{"sequence":15,"focus":"concept longlist"}
+{"sequence":16,"focus":"concept selection"}
+{"sequence":17,"focus":"black first"}
+{"sequence":18,"focus":"SVG construction"}
+{"sequence":19,"focus":"SVG audit"}
+{"sequence":20,"focus":"16px test"}
+{"sequence":21,"focus":"32px test"}
+{"sequence":22,"focus":"64px test"}
+{"sequence":23,"focus":"one colour"}
+{"sequence":24,"focus":"reversed test"}
+{"sequence":25,"focus":"contrast test"}
+{"sequence":26,"focus":"context test"}
+{"sequence":27,"focus":"shelf test"}
+{"sequence":28,"focus":"render inspection"}
+{"sequence":29,"focus":"checkpoint gate"}
+{"sequence":30,"focus":"client direction"}
+{"sequence":31,"focus":"selected refinement"}
+{"sequence":32,"focus":"small size variant"}
+{"sequence":33,"focus":"palette"}
+{"sequence":34,"focus":"typography"}
+{"sequence":35,"focus":"font licensing"}
+{"sequence":36,"focus":"lockups"}
+{"sequence":37,"focus":"presentation boards"}
+{"sequence":38,"focus":"favicon exports"}
+{"sequence":39,"focus":"web icon exports"}
+{"sequence":40,"focus":"guidelines"}
+{"sequence":41,"focus":"handoff"}
+{"sequence":42,"focus":"trademark limitation"}
+{"sequence":43,"focus":"similarity review"}
+{"sequence":44,"focus":"third party marks"}
+{"sequence":45,"focus":"telemetry policy"}
+{"sequence":46,"focus":"network boundary"}
+{"sequence":47,"focus":"external service approval"}
+{"sequence":48,"focus":"local rendering"}
+{"sequence":49,"focus":"optional renderer"}
+{"sequence":50,"focus":"SVG editability"}
+{"sequence":51,"focus":"live text restriction"}
+{"sequence":52,"focus":"raster restriction"}
+{"sequence":53,"focus":"deliverable hashes"}
+{"sequence":54,"focus":"review event"}
+{"sequence":55,"focus":"evidence paths"}
+{"sequence":56,"focus":"tool versions"}
+{"sequence":57,"focus":"asset storage"}
+{"sequence":58,"focus":"client workspace"}
+{"sequence":59,"focus":"product brands"}
+{"sequence":60,"focus":"website handoff"}
+{"sequence":61,"focus":"AI automation brands"}
+{"sequence":62,"focus":"software product brands"}
+{"sequence":63,"focus":"sub brands"}
+{"sequence":64,"focus":"responsive identity"}
+{"sequence":65,"focus":"app icon"}
+{"sequence":66,"focus":"favicon"}
+{"sequence":67,"focus":"social avatar"}
+{"sequence":68,"focus":"print output"}
+{"sequence":69,"focus":"embroidery limitation"}
+{"sequence":70,"focus":"motion extension"}
+{"sequence":71,"focus":"pattern extension"}
+{"sequence":72,"focus":"design tokens"}
+{"sequence":73,"focus":"brand system"}
+{"sequence":74,"focus":"client approval record"}
+{"sequence":75,"focus":"revision boundary"}
+{"sequence":76,"focus":"source archive"}
+{"sequence":77,"focus":"release archive"}
+{"sequence":78,"focus":"README guidance"}
+{"sequence":79,"focus":"Codex install"}
+{"sequence":80,"focus":"portable paths"}
+{"sequence":81,"focus":"Python invocation"}
+{"sequence":82,"focus":"Windows fallback"}
+{"sequence":83,"focus":"render fallback"}
+{"sequence":84,"focus":"failure disclosure"}
+{"sequence":85,"focus":"human art direction"}
+{"sequence":86,"focus":"clearance disclaimer"}
+{"sequence":87,"focus":"privacy check"}
+{"sequence":88,"focus":"delivery checklist"}
+{"sequence":89,"focus":"review completeness"}
+{"sequence":90,"focus":"adoption decision"}
