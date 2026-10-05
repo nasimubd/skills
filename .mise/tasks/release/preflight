@@ -411,6 +411,39 @@ fi
 __preflight_timing_report_phase_elapsed_milliseconds "Check 4b: skill body validation"
 
 # ───────────────────────────────────────────────────────────────────────────
+# Check 4ba: Portable Agent Skills validation.  [GATING]
+#
+# The shared layer has a smaller contract than Claude plugin skills. Keep its
+# gate separate so host-specific metadata cannot accidentally become required
+# for Codex-discoverable skills.
+# ───────────────────────────────────────────────────────────────────────────
+__preflight_timing_mark_phase_start_using_EPOCHREALTIME
+echo "→ Check 4ba [GATING]: portable Agent Skills validation..."
+if ! __preflight_gated_repo_script_is_present "scripts/validate-agent-skills.mjs"; then
+    __preflight_record_gating_failure "Check 4ba (agent skills)" \
+        "scripts/validate-agent-skills.mjs is absent — reported FAILING, not skipped"
+else
+    __preflight_run_gated_check_capturing_log_and_exit_code_sidecar \
+        agent-skills node scripts/validate-agent-skills.mjs
+    CHECK_4BA_VERDICT="$(__preflight_evidence_verdict_for_key agent-skills)"
+    case "$CHECK_4BA_VERDICT" in
+        ok)
+            echo "  ✓ [GATING] Check 4ba — portable Agent Skills valid"
+            ;;
+        missing-evidence)
+            __preflight_record_gating_failure "Check 4ba (agent skills)" \
+                "no exit-code evidence was produced — treated as failure, not as a pass"
+            ;;
+        *)
+            __preflight_record_gating_failure "Check 4ba (agent skills)" \
+                "validator exited ${CHECK_4BA_VERDICT#nonzero:}"
+            __preflight_emit_evidence_log_tail agent-skills 20
+            ;;
+    esac
+fi
+__preflight_timing_report_phase_elapsed_milliseconds "Check 4ba: portable Agent Skills validation"
+
+# ───────────────────────────────────────────────────────────────────────────
 # Check 4c: Marketplace regression suite.  [GATING]
 #
 # Auto-discovers and runs the repository's test files. Reported by count, not

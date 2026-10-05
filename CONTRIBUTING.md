@@ -21,11 +21,20 @@ something already in progress or already decided against.
    node scripts/validate-plugins.mjs        # manifests, schema, paths, dependencies
    node scripts/check-version-equality.mjs  # the version lockstep actually holds
    node scripts/validate-skill-body.mjs     # SKILL.md structural contract
+   node scripts/validate-agent-skills.mjs   # portable Agent Skills contract
    mise run test-marketplace-hook-regression-suite
    ```
 
    All four run locally — there is no CI. A PR that doesn't pass these
    won't be merged.
+
+## Adding a platform-neutral skill
+
+Create the canonical skill under `skills/<name>/`. Keep its `SKILL.md` within
+the Agent Skills contract and use relative references and portable scripts.
+Expose it to Codex through `.agents/skills/<name>` and link it into any Claude
+plugin that ships the same capability. Host-specific settings, permissions,
+hooks, and UI metadata belong in adapters, not duplicate skill bodies.
 4. Commit using [Conventional Commits](https://www.conventionalcommits.org/):
    a short imperative subject (≤50 characters preferred, 72 hard cap) and,
    for anything non-trivial, a body explaining *why*, not just what changed.

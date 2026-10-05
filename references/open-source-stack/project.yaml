@@ -1,0 +1,16 @@
+# Copy this file to docs/open-source-stack/projects/<slug>/project.yaml
+name: example-project
+upstream_url: https://github.com/example/project
+vcs: git
+reviewed_ref: main
+reviewed_commit: "0000000000000000000000000000000000000000"
+retrieved_at: "2026-01-01T00:00:00Z"
+purl: pkg:github/example/project
+license_spdx: Apache-2.0
+status: discovered
+owner: platform
+capabilities: []
+use_cases: []
+telemetry:
+  upstream_emits: unknown
+  policy: document-before-adoption

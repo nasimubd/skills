@@ -2,7 +2,7 @@
   "name": "skills",
   "version": "1.3.0",
   "private": true,
-  "description": "A Claude Code plugin marketplace.",
+  "description": "A cross-platform Agent Skills repository for Claude Code and Codex.",
   "license": "MIT",
   "author": {
     "name": "nasimubd",
