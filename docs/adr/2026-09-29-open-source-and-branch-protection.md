@@ -2,7 +2,8 @@
 
 ## Status
 
-Current
+Current, except the merge method: "squash-merge only" is superseded by
+[2026-10-28-git-protocol.md](./2026-10-28-git-protocol.md) (rebase and merge).
 
 ## Context and Problem Statement
 

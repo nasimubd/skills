@@ -138,7 +138,7 @@ is the changelog.
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full process — plugin structure, gates
-to run, commit conventions, and the PR/squash-merge flow.
+to run, commit conventions, and the PR/rebase-merge flow.
 
 ## Code of Conduct
 

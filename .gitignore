@@ -22,20 +22,23 @@ build/
 *.bun-build
 .*.bun-build
 
-# Claude Code session state — with ONE exception.
+# Claude Code session state — with TWO exceptions.
 #
 # `.claude/` holds machine-local session and settings files that must never be
 # committed, but this repository DOES ship its slash-command wrappers: they are
 # the discoverable entry point to every mise task, and a wrapper that only
-# exists on one machine is not an entry point at all.
+# exists on one machine is not an entry point at all. It also ships its
+# on-demand rules (`.claude/rules/`, for example the git protocol), which every
+# clone must follow and so must have.
 #
-# The two lines below are the only form of this that works. A bare `.claude/`
+# The lines below are the only form of this that works. A bare `.claude/`
 # followed by `!.claude/commands/` does NOT re-include anything: git never
 # descends into an excluded directory, so a negation under it is unreachable.
 # Excluding the CONTENTS with `.claude/*` leaves the directory itself
 # traversable, and the negation then applies.
 .claude/*
 !.claude/commands/
+!.claude/rules/
 
 # Local mise configuration. Holds machine-specific paths and API tokens; a
 # committed copy is a published copy.
