@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# automation-scaffold — the plugin's command. Claude Code puts a plugin's bin/ on the Bash
+# tool's PATH while the plugin is enabled, so skills call this by name.
+#
+#   automation-scaffold setup show | set <key> <value> | unset <key>
+#   automation-scaffold health
+#   automation-scaffold discover --seed "<name or id>" [--seed ...] [--depth N] [--out file]
+#   automation-scaffold scaffold --dir <repo> --name <slug> [--discovery file] [...]
+#   automation-scaffold publish repo|pr|release --dir <repo> [--repo owner/name] [--yes]
+
+set -euo pipefail
+
+src="${BASH_SOURCE[0]}"
+while [[ -L "$src" ]]; do
+  dir="$(cd "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ "$src" == /* ]] || src="$dir/$src"
+done
+root="$(cd "$(dirname "$src")/.." && pwd)"
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  setup) exec bash "$root/scripts/setup.sh" "$@" ;;
+  health) exec bash "$root/scripts/health.sh" "$@" ;;
+  discover) exec node "$root/scripts/discover.js" "$@" ;;
+  scaffold) exec node "$root/scripts/scaffold.js" "$@" ;;
+  publish) exec bash "$root/scripts/publish.sh" "$@" ;;
+  *) echo "usage: automation-scaffold setup|health|discover|scaffold|publish (see header)" >&2; exit 2 ;;
+esac
