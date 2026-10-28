@@ -56,6 +56,49 @@ function slugify(name) {
     .normalize('NFKD').replace(/[^\w\s-]/g, ' ').trim().toLowerCase()
     .replace(/[\s_]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'unnamed';
 }
+/**
+ * Component slug: the artifact's slug without the project's own name in front (it is already
+ * the repository), cut on a word boundary to at most MAX_SLUG characters. The id is the
+ * Conventional Commits scope, and commitlint caps the whole header at 72 characters.
+ */
+const MAX_SLUG = 36;
+function componentSlug(name, project) {
+  let slug = slugify(name);
+  const rest = slug.startsWith(`${project}-`) ? slug.slice(project.length + 1) : '';
+  if (rest) slug = rest;
+  while (slug.length > MAX_SLUG && slug.includes('-')) slug = slug.slice(0, slug.lastIndexOf('-'));
+  return slug.slice(0, MAX_SLUG);
+}
+/** One factual sentence for the README and the GitHub About: what the repository holds. */
+function describe(title, components) {
+  const count = (kind, one, many) => {
+    const n = components.filter((c) => c.kind === kind).length;
+    return n ? `${n} ${n === 1 ? one : many}` : null;
+  };
+  const parts = [
+    count('canvas-app', 'Power Apps canvas app', 'Power Apps canvas apps'),
+    count('cloud-flow', 'Power Automate flow', 'Power Automate flows'),
+    count('n8n-workflow', 'n8n workflow', 'n8n workflows'),
+    count('make-scenario', 'Make scenario', 'Make scenarios'),
+  ].filter(Boolean);
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
+  return list
+    ? `${title}: ${list}, exported from production and released per component.`
+    : `${title}: automation exported from production and released per component.`;
+}
+
+/** GitHub topics from the registered component kinds and the release convention. */
+const KIND_TOPICS = {
+  'canvas-app': ['power-platform', 'power-apps'],
+  'cloud-flow': ['power-platform', 'power-automate'],
+  'n8n-workflow': ['n8n'],
+  'make-scenario': ['make'],
+};
+function topicsFor(components) {
+  const kinds = components.map((c) => KIND_TOPICS[c.kind] ?? []).flat();
+  return [...new Set([...kinds, 'automation', 'semantic-release', 'conventional-commits'])];
+}
+
 const folderName = (name) => slugify(name).split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join('-');
 
 function walk(dir, base = dir) {
@@ -118,7 +161,6 @@ function main() {
   const config = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : {};
   const discovery = a.discovery ? JSON.parse(fs.readFileSync(a.discovery, 'utf8')) : null;
   const title = a.title ?? a.name.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
-  const description = a.description ?? `Automation for ${title}: Power Platform, n8n and related workflows, versioned per component.`;
 
   // Components from discovery, merged with any already registered.
   fs.mkdirSync(a.dir, { recursive: true });
@@ -132,7 +174,7 @@ function main() {
     if (!k) continue;
     const prior = known.get(JSON.stringify(n.platform));
     if (prior) { prior.key = n.key; continue; }
-    const slug = slugify(n.name);
+    const slug = componentSlug(n.name, a.name);
     let id = `${k.prefix}-${slug}`;
     for (let i = 2; used.has(id); i++) id = `${k.prefix}-${slug}-${i}`;
     used.add(id);
@@ -140,6 +182,7 @@ function main() {
     components.push({ key: n.key, id, kind: n.kind, displayName: n.name, path: folder, platform: Object.fromEntries(Object.entries(n.platform).filter(([, v]) => v)) });
   }
 
+  const description = a.description ?? describe(title, components);
   const systems = [
     config.powerPlatform?.environmentId && `Power Platform environment \`${config.powerPlatform.environmentName ?? 'default'}\` (\`${config.powerPlatform.environmentId}\`)`,
     config.n8n?.url && `n8n ${config.n8n.url}`,
@@ -190,6 +233,8 @@ function main() {
   if (!fs.existsSync(projectFile) || a.force) {
     const project = {
       name: a.name,
+      // The GitHub repository's About: applied by `publish about` (and after the PR merges).
+      github: { repo: a.repo ?? null, description, topics: topicsFor(components) },
       powerPlatform: config.powerPlatform?.environmentId ? { environmentId: config.powerPlatform.environmentId, environmentName: config.powerPlatform.environmentName ?? null } : undefined,
       n8n: config.n8n?.url ? { url: config.n8n.url, keychainItem: config.n8n.keychainItem ?? null } : undefined,
       make: config.make?.zone ? { zone: config.make.zone, teamId: config.make.teamId ?? null, keychainItem: config.make.keychainItem ?? null } : undefined,
@@ -253,4 +298,8 @@ function main() {
   if (results.some((r) => !r.ok)) process.exitCode = 1;
 }
 
-try { main(); } catch (e) { console.error(`scaffold: ${e.message}`); process.exitCode = 1; }
+if (require.main === module) {
+  try { main(); } catch (e) { console.error(`scaffold: ${e.message}`); process.exitCode = 1; }
+}
+
+module.exports = { slugify, componentSlug, describe, topicsFor };

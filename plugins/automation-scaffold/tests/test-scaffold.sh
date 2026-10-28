@@ -189,6 +189,13 @@ MSG=$(PLATFORM_FIXTURES="$MIS" node -e 'require(process.argv[1]).liveApp(process
   "$PLUGIN_ROOT/template/scripts/lib/platform.js" "$APP" 2>&1)
 [[ "$MSG" == *"is not the live version 20261027T100000Z"* ]] && ok || bad "a package that is not the live version is refused: $MSG"
 
+# ---- component ids: the scope of a commit header capped at 72 characters ----
+slug() { node -e 'console.log(require(process.argv[1]).componentSlug(process.argv[2], process.argv[3]))' "$PLUGIN_ROOT/scripts/scaffold.js" "$1" "$2"; }
+assert_eq "the project name is not repeated in a component id" "asana-event-sync" "$(slug 'Matter Status – Asana Event Sync' matter-status)"
+assert_eq "an artifact named like the project keeps its name" "matter-status" "$(slug 'Matter Status' matter-status)"
+long="$(slug 'A Really Long Workflow Name That Keeps Going On And On Forever' x)"
+(( ${#long} <= 36 )) && [[ "$long" != *- ]] && ok || bad "a long name is cut on a word boundary to 36 characters: $long"
+
 # ---- scaffold ----
 REPO="$WORK/repo"
 bash "$CLI" scaffold --dir "$REPO" --name client-intake --title "Client Intake" --discovery "$DISC" >"$WORK/summary.json" 2>"$WORK/scaffold.err" \
@@ -246,6 +253,42 @@ assert_has "PR is rebase-merged" "gh pr merge --rebase --delete-branch" "$out"
 assert_lacks "PR body carries no AI attribution" "Generated with" "$out"
 assert_eq "release refuses without --yes and changes nothing" "0" "$(status_of bash "$CLI" publish release --dir "$REPO")"
 assert_eq "publish without config author is refused" "3" "$(AUTOMATION_SCAFFOLD_CONFIG_DIR="$WORK/none" status_of bash "$CLI" publish pr --dir "$REPO")"
+
+# ---- the repository's About: description and topics from project.json ----
+assert_eq "description says what the repository holds" \
+  "Client Intake: 1 Power Apps canvas app, 2 Power Automate flows and 1 n8n workflow, exported from production and released per component." \
+  "$(jq -r .github.description "$REPO/project.json")"
+assert_eq "topics follow the component kinds" "power-platform power-apps power-automate n8n automation semantic-release conventional-commits" \
+  "$(jq -r '.github.topics | join(" ")' "$REPO/project.json")"
+assert_has "the README carries the same description" "$(jq -r .github.description "$REPO/project.json")" "$(cat "$REPO/README.md")"
+# gh stub: GH_DESC and GH_TOPICS are what GitHub currently shows; edits are logged.
+cat >"$WORK/bin/gh" <<EOF
+#!/usr/bin/env bash
+case "\$*" in
+  *nameWithOwner*) echo example-owner/client-intake ;;
+  *"--json description,repositoryTopics"*) jq -n --arg d "\$GH_DESC" --arg t "\$GH_TOPICS" '{description: \$d, repositoryTopics: [\$t | splits(" ") | select(. != "") | {name: .}]}' ;;
+  *"--json description"*) echo "\$GH_DESC" ;;
+  *repositoryTopics*) echo "\$GH_TOPICS" ;;
+  "repo edit"*) echo "gh \$*" >>"$WORK/gh-edit.log" ;;
+esac
+EOF
+chmod +x "$WORK/bin/gh"
+about() { PATH="$WORK/bin:$PATH" GH_DESC="$1" GH_TOPICS="$2" bash "$CLI" publish about --dir "$REPO" "${@:3}" 2>&1; }
+out="$(about "" "n8n")"
+assert_has "an empty description would be set" "--description Client Intake: 1 Power Apps canvas app" "$out"
+assert_has "only missing topics are added" "--add-topic power-platform --add-topic power-apps --add-topic power-automate --add-topic automation" "$out"
+assert_lacks "a topic already present is not re-added" "--add-topic n8n" "$out"
+assert_eq "about without --yes edits nothing" "no" "$([[ -e "$WORK/gh-edit.log" ]] && echo yes || echo no)"
+out="$(about "Written by hand" "" --yes)"
+assert_has "an existing description is kept and reported" "description kept (already set on GitHub): Written by hand" "$out"
+assert_lacks "an existing description is not overwritten" "--description" "$(cat "$WORK/gh-edit.log")"
+assert_has "with --yes the topics are applied" "gh repo edit example-owner/client-intake --add-topic power-platform" "$(cat "$WORK/gh-edit.log")"
+all="power-platform power-apps power-automate n8n automation semantic-release conventional-commits"
+assert_has "nothing to do when the About is complete" "already up to date" "$(about "Written by hand" "$all" --yes)"
+verify() { about "$1" "$2" --check >/dev/null && echo pass || echo fail; }
+assert_eq "verification passes with a description and every topic" "pass" "$(verify "x" "$all")"
+assert_eq "verification fails on an empty description" "fail" "$(verify "" "$all")"
+assert_eq "verification fails on a missing topic" "fail" "$(verify "x" "n8n")"
 
 # ---- the real order: publish repo --yes, then scaffold into the clone ----
 # gh is a stub: the repo does not exist, "create" is a no-op and "clone" clones a local bare

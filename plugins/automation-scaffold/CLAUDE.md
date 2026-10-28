@@ -58,6 +58,15 @@
 - **Zapier is documented only.** There is no general public API to export a Zap.
 - **`PLATFORM_FIXTURES`** replaces every network call with files; it exists for the offline
   test and must never be set in real use.
+- **Component ids drop the project name and stop at 36 characters** (first real scaffold,
+  2026-10-28). The id is the commit scope, and commitlint caps the header at 72 characters:
+  `n8n-aegis-matter-status-asana-to-microsoft-list` broke `feat(<id>): add <name> from
+  production` at 120. A display name that would still overflow moves to the commit body.
+- **The repository's About is set from `project.json` `github`** (user request, 2026-10-28):
+  the first real scaffold left the GitHub description empty and no topics. The description is
+  one factual sentence counted from the registered components; topics come from the component
+  kinds plus the release convention, never from names. An existing description is kept, and
+  topics are only added. `publish release` fails verification while the About is incomplete.
 - **`publish.sh` refuses to write without `--yes`.** The skill asks the user once for the
   whole plan, then passes `--yes`; without it every phase prints its plan.
 
@@ -65,5 +74,5 @@
 
 `tests/test-scaffold.sh`: setup → discover → scaffold → export and pin → the scaffolded repo's
 own checks (registry, release gate, pins, commitlint config, AI-attribution rejection) →
-publish dry run. Fully offline. Not covered: the live GitHub steps and `semantic-release`
+publish dry run → the About (description, topics, `--check`). Fully offline. Not covered: the live GitHub steps and `semantic-release`
 itself, which run only in a real scaffold.
