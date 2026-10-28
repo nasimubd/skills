@@ -34,6 +34,7 @@ expect() {
 expect deny "raw open of a chat link" \
   'open "https://teams.microsoft.com/l/chat/0/0?users=a@b.com&message=hi"'
 expect deny "msteams scheme" 'open "msteams:/l/chat/0/0?users=a@b.com&message=hi"'
+expect deny "msteams scheme with host" 'open "msteams://teams.microsoft.com/l/chat/0/0?users=a@b.com"'
 expect deny "launcher after a pipe" 'echo x | /usr/bin/open "https://teams.microsoft.com/l/chat/0/0?users=a@b.com"'
 expect deny "osascript launcher" 'osascript -e "open location \"https://teams.microsoft.com/l/chat/0/0\""'
 expect deny "python webbrowser" 'python3 -c "import webbrowser; webbrowser.open(\"https://teams.microsoft.com/l/chat/0/0\")"'

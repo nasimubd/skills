@@ -7,14 +7,21 @@ Invariants and decisions that aren't obvious from reading the code.
 ## Decisions (2026-10-28, user-approved)
 
 - A plugin, not an MCP server: MCP tool schemas cost context on every turn.
-- Sending is **tier 1 only**: the deep link fills the compose box and the user presses
-  Send. The claude.ai Microsoft 365 connector cannot send (`Missing scope
-  'ChatMessage.Send'`, six attempts in October 2026), and the Azure CLI Graph token has
+- Sending is **tier 1 only**: the chat opens in the Teams app, the message is on the
+  clipboard, and the user pastes it and presses Enter. The claude.ai Microsoft 365
+  connector cannot send (`Missing scope 'ChatMessage.Send'`, six attempts in October
+  2026), and the Azure CLI Graph token has
   no `Chat.*` scopes. Graph and Power Automate sending stay documented, not built.
 - Category `productivity`, the existing category for messaging plugins; no new
   category was added.
 - Every factual claim needs evidence the user can see (the user's rule, quoted in
   `references/evidence.md`).
+
+## One message command (2026-10-28, user decision)
+
+`draft`, `reply` and `send` were merged into one skill, `message`, which picks the action
+from the request; `setup` and `health` stay separate, as the repository convention requires
+for service-backed plugins. The user found five commands too complex to use.
 
 ## Reading is deferred (2026-10-28)
 
@@ -44,12 +51,14 @@ evidence, and the script alone can be skipped by building the URL by hand.
 
 ## Things that look wrong but are deliberate
 
-- **The message is always copied to the clipboard as well as put in the link.**
-  Microsoft documents no length limit and no line-break behaviour for `message=`
-  (see `references/deep-link.md`). The clipboard is the fallback, not a duplicate.
-- **`https://teams.microsoft.com/...`, not `msteams:`.** The https form is the one
-  Microsoft documents; the custom scheme is not on that page.
-- **Trailing newlines are stripped from the link** but kept in the stored message.
+- **The link carries no `message=`; the clipboard is the only copy** (live tests,
+  2026-10-28, `references/deep-link.md`). With the text in the link as well as on the
+  clipboard the user got two copies; Teams also doubled link text on its own, ignored it
+  when the chat had a saved draft, and dropped line breaks. Do not add `message=` back.
+- **`msteams://teams.microsoft.com/...`, not `https://`.** Microsoft's "Configure deep
+  links" page documents `msteams://` as opening the desktop client directly, skipping the
+  browser's chooser page. It needs the desktop app, which `health` checks.
+- **Trailing newlines are stripped from the clipboard** but kept in the stored message.
 - **Stale after 6 hours** (`TEAMS_EVIDENCE_MAX_AGE_MIN=360`): long enough for one
   working session, short enough that "the run finished cleanly" is re-checked the next
   morning.

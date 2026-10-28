@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# teams.sh — evidence-gated Microsoft Teams message drafts, sent by deep link.
+# teams.sh — evidence-gated Microsoft Teams message drafts, opened in the Teams app.
 #
 # A draft is a message plus a ledger of the claims it makes. Every factual claim
 # carries its evidence (source, exact excerpt, capture time, how to reproduce).
 # `verify` refuses a draft while any fact is unverified or stale, and `open`
 # refuses to build a link for a message that has not passed `verify` in its
-# current form. Tier 1 only: the link opens Teams with the text in the compose
-# box and the person presses Send. Nothing here posts a message by itself.
+# current form. Tier 1 only: `open` puts the message on the clipboard and opens the
+# chat in the Teams desktop app (msteams://, no browser); the person pastes it once
+# and presses Send. Nothing here posts a message by itself.
 #
 # USAGE
 #   teams.sh new [<draft-id>]
@@ -39,7 +40,11 @@ readonly STATE_DIR="${TEAMS_COMMANDER_STATE_DIR:-$HOME/.local/state/teams-comman
 readonly CONFIG_DIR="${TEAMS_COMMANDER_CONFIG_DIR:-$HOME/.config/teams-commander}"
 readonly CONTACTS="$CONFIG_DIR/contacts.json"
 readonly MAX_AGE_MIN="${TEAMS_EVIDENCE_MAX_AGE_MIN:-360}"
-readonly LINK_BASE="https://teams.microsoft.com/l/chat/0/0"
+# msteams:// opens the desktop app directly, skipping the browser (Microsoft Learn,
+# "Configure deep links", protocol handlers). The message is NOT put in the link: tested
+# 2026-10-28, Teams doubled it, ignored it when the chat had a saved draft, and dropped
+# line breaks (references/deep-link.md). The clipboard carries it instead, exactly once.
+readonly LINK_BASE="msteams://teams.microsoft.com/l/chat/0/0"
 
 die() { echo "$SELF: $1" >&2; exit "${2:-1}"; }
 usage() { die "usage: $1" 2; }
@@ -230,16 +235,13 @@ contact_json() {
 }
 
 build_link() {
-  local ledger="$1" alias="$2" dir contact tenant
-  dir="$(dirname "$ledger")"
+  local alias="$2" contact tenant
   contact="$(contact_json "$alias")"
   tenant="$(jq -r '.tenant_id // ""' "$CONTACTS")"
-  jq -rn --arg base "$LINK_BASE" --arg tenant "$tenant" --argjson c "$contact" \
-    --rawfile msg "$dir/message.txt" '
+  jq -rn --arg base "$LINK_BASE" --arg tenant "$tenant" --argjson c "$contact" '
     [ (if $tenant != "" then "tenantId=" + ($tenant|@uri) else empty end),
       "users=" + ($c.emails | map(@uri) | join(",")),
-      (if ($c.topic // "") != "" then "topicName=" + ($c.topic|@uri) else empty end),
-      "message=" + ($msg | sub("\n+$"; "") | @uri) ]
+      (if ($c.topic // "") != "" then "topicName=" + ($c.topic|@uri) else empty end) ]
     | $base + "?" + join("&")'
 }
 
@@ -261,10 +263,10 @@ cmd_open() {
   dir="$(dirname "$ledger")"
   require_verified "$ledger"
   url="$(build_link "$ledger" "$alias")"
-  # The clipboard copy is the fallback for whatever the link cannot carry:
-  # Microsoft documents no length limit and no line-break behaviour for it.
-  pbcopy <"$dir/message.txt"
-  echo "Message copied to the clipboard ($(wc -c <"$dir/message.txt" | tr -d ' ') bytes); link is ${#url} characters."
+  # The one copy of the message: the clipboard, without trailing newlines (a paste would
+  # otherwise leave an empty line under the text).
+  printf '%s' "$(cat "$dir/message.txt")" | pbcopy
+  echo "Message copied to the clipboard ($(wc -c <"$dir/message.txt" | tr -d ' ') bytes)."
   if $dry; then
     echo "DRY RUN — not opened: $url"
     return 0
@@ -272,7 +274,8 @@ cmd_open() {
   open "$url"
   jq_update "$ledger" --arg at "$(now_iso)" --arg c "$alias" --argjson n "${#url}" \
     '.opened += [{at: $at, contact: $c, url_length: $n}]'
-  echo "Opened Teams for '$alias'. Check the compose box, then press Send yourself."
+  echo "Opened the Teams chat with '$alias'. Click the compose box, press ⌘V once (⌘A first if"
+  echo "an old draft is there), check it, then press Enter yourself."
 }
 
 cmd_contact() {
@@ -321,12 +324,13 @@ cmd_health() {
   echo "teams-commander health"
   check "jq installed" "command -v jq" "install jq"
   check "shasum installed" "command -v shasum" "macOS ships it; check PATH"
-  check "pbcopy available" "command -v pbcopy" "clipboard fallback needs macOS pbcopy"
-  check "open available" "command -v open" "the deep link is opened with macOS open"
-  check "Microsoft Teams installed" "open -Ra 'Microsoft Teams'" "links will open in the browser instead"
+  check "pbcopy available" "command -v pbcopy" "the message is handed over on the macOS clipboard"
+  check "open available" "command -v open" "the chat link is opened with macOS open"
+  check "Microsoft Teams desktop app installed" "open -Ra 'Microsoft Teams'" "msteams:// links need the desktop app"
   check "state dir writable ($STATE_DIR)" "mkdir -p '$STATE_DIR' && test -w '$STATE_DIR'" "check permissions"
   check "contacts file present ($CONTACTS)" "test -f '$CONTACTS'" "run the setup skill"
-  check "contacts file is valid JSON with contacts" "jq -e '.contacts | length > 0' '$CONTACTS'" "add a contact"  echo "Checked: $checked · failed: $fails"
+  check "contacts file is valid JSON with contacts" "jq -e '.contacts | length > 0' '$CONTACTS'" "add a contact"
+  echo "Checked: $checked · failed: $fails"
   [[ "$fails" -eq 0 ]]
 }
 
