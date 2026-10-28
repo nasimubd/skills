@@ -25,7 +25,10 @@ assert_exit_zero "empty stdin" ""
 FULL_PAYLOAD='{"session_id":"3e83be9e-2559-4c75-869f-a65a883d85d1","model":{"display_name":"Sonnet 5"},"context_window":{"total_input_tokens":42000,"context_window_size":100000},"cost":{"total_cost_usd":1.5,"total_duration_ms":60000}}'
 OUTPUT="$(printf '%s' "$FULL_PAYLOAD" | bash "$PLUGIN_ROOT/scripts/statusline.sh")"
 
-if [[ "$OUTPUT" == *"~/skills"* ]]; then
+# statusline.sh renders the working directory with $HOME shown as ~; expect exactly that
+# for wherever the suite runs, not one machine's checkout path.
+EXPECTED_PATH="$(pwd | sed "s|$HOME|~|")"
+if [[ "$OUTPUT" == *"$EXPECTED_PATH"* ]]; then
   PASS=$((PASS + 1))
 else
   FAIL=$((FAIL + 1))
