@@ -38,9 +38,15 @@ hooks, and UI metadata belong in adapters, not duplicate skill bodies.
 4. Commit using [Conventional Commits](https://www.conventionalcommits.org/):
    a short imperative subject (≤50 characters preferred, 72 hard cap) and,
    for anything non-trivial, a body explaining *why*, not just what changed.
-5. Open a PR. It will be **squash-merged** — the PR title becomes the final
-   commit subject, so write it as a proper Conventional Commit subject line,
-   not a description of the PR process.
+   Run `mise run hooks:install` once per clone: the commit-msg hook then
+   rejects a non-conventional message or an AI attribution line.
+5. Work on a branch named `<type>/<kebab-slug>` (`feat/…`, `fix/…`, `docs/…`).
+   Before opening the PR, and again before merging, run
+   `mise run pr:check -- "<PR title>" <file-with-PR-body>`.
+6. Open a PR whose title is a Conventional Commit header. It will be
+   **rebased and merged**: every commit lands on `main` as written, so each
+   one must stand on its own. The full protocol is
+   [.claude/rules/git.md](./.claude/rules/git.md).
 
 ## Documentation changes
 

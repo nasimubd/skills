@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Install the git protocol locally: dev dependencies (commitlint) and the commit-msg hook (core.hooksPath .githooks). Run once per clone."
+set -euo pipefail
+ROOT="${MISE_PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+cd "$ROOT"
+bun install --frozen-lockfile
+git config core.hooksPath .githooks
+echo "✓ commitlint installed; commit-msg hook active (core.hooksPath=$(git config core.hooksPath))"

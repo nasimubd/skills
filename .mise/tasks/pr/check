@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#MISE description="Before opening and again before merging a PR (there is no CI): branch name, every commit since origin/main, the PR title, and the PR body. Usage: mise run pr:check -- \"<PR title>\" [<file with the PR body>]"
+set -euo pipefail
+ROOT="${MISE_PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+CL="$ROOT/node_modules/.bin/commitlint"
+[[ -x "$CL" ]] || { echo "✗ commitlint not installed; run: mise run hooks:install" >&2; exit 127; }
+fails=0
+
+# Branch: <type>/<kebab-slug>, never main.
+branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
+if [[ "$branch" =~ ^(feat|fix|chore|docs|refactor|test|perf|build|ci|revert)/[a-z0-9][a-z0-9.-]*$ ]]; then
+  echo "✓ branch $branch"
+else
+  echo "✗ branch '$branch' is not <type>/<kebab-slug> (feat/, fix/, chore/, docs/, …)"; fails=$((fails + 1))
+fi
+
+# Every commit on the branch.
+git -C "$ROOT" fetch -q origin main
+if (cd "$ROOT" && "$CL" --from origin/main --to HEAD --verbose); then :; else fails=$((fails + 1)); fi
+if [[ -z "$(git -C "$ROOT" log --format=%h origin/main..HEAD)" ]]; then
+  echo "✗ no commits on this branch since origin/main"; fails=$((fails + 1))
+fi
+
+# The PR title is a commit header too; the body carries no AI attribution.
+if [[ -n "${1:-}" ]]; then
+  if printf '%s\n' "$1" | (cd "$ROOT" && "$CL" --verbose); then :; else fails=$((fails + 1)); fi
+else
+  echo "✗ pass the PR title: mise run pr:check -- \"<title>\" [<body file>]"; fails=$((fails + 1))
+fi
+if [[ -n "${2:-}" ]]; then
+  if node "$ROOT/scripts/no-ai-attribution.cjs" <"$2"; then echo "✓ PR body carries no AI attribution"; else fails=$((fails + 1)); fi
+fi
+
+echo "pr:check: $fails problem(s)"
+[[ "$fails" -eq 0 ]]

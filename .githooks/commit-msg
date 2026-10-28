@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Reject commit messages that are not Conventional Commits or that carry AI attribution
+# (.claude/rules/git.md). Installed by `mise run hooks:install` (core.hooksPath .githooks).
+ROOT="$(git rev-parse --show-toplevel)"
+CL="$ROOT/node_modules/.bin/commitlint"
+if [ ! -x "$CL" ]; then
+  echo "commit-msg: commitlint is not installed; run: mise run hooks:install" >&2
+  exit 1
+fi
+exec "$CL" --edit "$1"
