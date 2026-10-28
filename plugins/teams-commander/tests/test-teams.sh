@@ -64,12 +64,17 @@ assert_eq "bearer token in evidence is refused" "2" "$(status_of bash "$TEAMS" c
 assert_eq "password in evidence is refused" "2" "$(status_of bash "$TEAMS" claim d1 \
   --text x --kind fact --source-type cmd --source y --excerpt "password=hunter2secret")"
 
-# The link carries the encoded message and the contact.
+# The link opens the chat in the desktop app and carries no message text: Teams doubled
+# or ignored pre-filled text in live tests, so the clipboard is the only copy.
 link="$(bash "$TEAMS" link d1 jona)"
-assert_eq "link targets the documented chat endpoint" "1" \
-  "$(grep -c '^https://teams.microsoft.com/l/chat/0/0?users=jona%40example.com&message=Hi%20Jona%2C' <<<"$link")"
-assert_eq "line break is percent-encoded" "1" "$(grep -c 'matters.%0AOK' <<<"$link")"
-assert_eq "trailing newline is not sent" "0" "$(grep -c '%0A$' <<<"$link")"
+assert_eq "link opens the chat in the desktop app" "msteams://teams.microsoft.com/l/chat/0/0?users=jona%40example.com" "$link"
+assert_eq "link carries no message text" "0" "$(grep -c 'message=' <<<"$link")"
+bash "$TEAMS" open d1 jona --dry-run >/dev/null
+assert_eq "clipboard keeps the line break" "Hi Jona, the 12:00 run processed 17,291 matters.
+OK to close the task?" "$(cat "$WORK/clipboard")"
+assert_eq "clipboard has no trailing newline" "0" "$(tail -c 1 "$WORK/clipboard" | grep -c '^$')"
+assert_eq "clipboard holds the message once" "1" "$(grep -c 'Hi Jona' "$WORK/clipboard")"
+rm -f "$WORK/clipboard"
 assert_eq "unknown contact is refused" "1" "$(status_of bash "$TEAMS" link d1 nobody)"
 
 # Editing the message after verify invalidates the verification.
@@ -104,7 +109,7 @@ bash "$TEAMS" contact add ops a@example.com,b@example.com --topic "Ops review" >
 bash "$TEAMS" contact tenant 00000000-1111-2222-3333-444444444444 >/dev/null
 link="$(bash "$TEAMS" link d1 ops)"
 assert_eq "group link lists both users and the topic" "1" \
-  "$(grep -c 'tenantId=00000000-1111-2222-3333-444444444444&users=a%40example.com,b%40example.com&topicName=Ops%20review&message=' <<<"$link")"
+  "$(grep -c 'tenantId=00000000-1111-2222-3333-444444444444&users=a%40example.com,b%40example.com&topicName=Ops%20review$' <<<"$link")"
 assert_eq "bad email is refused" "2" "$(status_of bash "$TEAMS" contact add x not-an-email)"
 
 echo "test-teams.sh: $PASS passed, $FAIL failed"

@@ -16,17 +16,17 @@ Teams. Unchecked claims block the send.
 
 | Command | What it does |
 |---|---|
-| `/teams-commander:draft` | Gathers evidence, writes a short Teams-style message, shows the message with its evidence table |
-| `/teams-commander:reply` | Reads the latest messages in a chat (read-only) and drafts an evidenced reply |
-| `/teams-commander:send` | Opens Teams with the verified message pre-filled and on your clipboard; you press Send |
+| `/teams-commander:message` | One command for the message: **draft** it (evidence shown for every fact), **reply** to a chat (read-only), or **send** it (opens the chat in the Teams app with the message on your clipboard; you paste once and press Enter) |
 | `/teams-commander:setup` | Adds contacts (alias → work email) to a local file that is never committed |
 | `/teams-commander:health` | Checks the dependencies and local configuration |
 
 ## How sending works
 
-Tier 1 only: a [Teams chat deep link](./references/deep-link.md) opens the chat with
-the text in the compose box. Nothing is posted automatically, and no extra Microsoft
-permission is needed. Scripted sending (Graph or Power Automate) is documented as a
+Tier 1 only: an `msteams://` [chat link](./references/deep-link.md) opens the chat in
+the Teams desktop app, without the browser, and the message goes on your clipboard: one
+copy, line breaks kept. You press ⌘V and Enter. The link deliberately carries no text:
+in live tests Teams doubled pre-filled text or ignored it when the chat had a saved
+draft. Nothing is posted automatically, and no extra Microsoft permission is needed. Scripted sending (Graph or Power Automate) is documented as a
 higher tier and not built.
 
 ## How reading works
@@ -45,8 +45,8 @@ Then run `/teams-commander:setup` and `/teams-commander:health`.
 
 ## Requirements
 
-macOS (`open`, `pbcopy`, `shasum`), `jq`, and Microsoft Teams or a browser. The `reply`
-skill reads chats through the claude.ai Microsoft 365 connector when it is connected.
+macOS (`open`, `pbcopy`, `shasum`), `jq`, and the Microsoft Teams desktop app. Replies
+read chats through the claude.ai Microsoft 365 connector when it is connected.
 
 ## Local files
 
