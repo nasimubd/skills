@@ -39,6 +39,9 @@ automation-scaffold discover --seed "<name or id>" [--seed ...] [--exclude <name
   **writes**, and what those flows call. Read-only lists are listed, not followed. `[OPT]` and
   `TEST -` copies are out unless `--include-copies`; `--exclude` drops anything the user names.
 - An ambiguous or missing seed fails with the candidates; ask the user which one.
+- `Not followed:` lists artifacts that write or touch a list in scope (for example the n8n
+  workflows that fill a list a viewer app reads). Show each with its evidence and ask the user,
+  with AskUserQuestion, which to include; re-run discovery with those as extra `--seed`s.
 - Show the user the artifacts found and, for each link, its evidence (artifact, JSON path,
   value). Say which platforms were **not examined** (the `skipped` lines). Never add an
   artifact the discovery did not find.

@@ -31,6 +31,14 @@
   list → flows it triggers *only when the list is written* (Patch/Collect/Remove/RemoveIf/
   UpdateIf/form in the live `.pa.yaml`, or a write `operationId`), and flow → what it calls.
   Never list → app. `[OPT]` and `TEST -` copies are left out unless `--include-copies`.
+- **The app package is downloaded from the app endpoint, not the versions API** (2026-10-28).
+  The versions API's link was signed at publish time and expires after seven days (HTTP 403 on
+  any app not republished that week). `livePackage` takes the fresh link from
+  `GET /apps/<id>` and refuses it unless its blob is the live version's.
+- **Writers of a list in scope are reported, not followed** (2026-10-28). A read-only viewer
+  app's list was filled by two n8n workflows that the event-chain rule never reaches.
+  Discovery lists such artifacts under `notFollowed` with evidence; the user decides whether
+  to add each as a `--seed`. Following them automatically re-creates the over-broad scope.
 - **Package entries use backslashes** (`Src\App.pa.yaml`); extraction passes the archive's own
   name with backslashes doubled for `unzip`. The app list API has only data source titles;
   list ids come from the live package's `References/DataSources.json`.
