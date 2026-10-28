@@ -26,10 +26,20 @@ plugins you can install, and the tooling to build your own.
 list here is derived from it; if the two disagree, the manifest is right and this README
 is stale.
 
-| Plugin | What it does |
+| Plugin | What it does | Category |
+|---|---|---|
+| [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — with a native Codex footer adapter. | productivity |
+| [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing tasks across deterministic tools, decision models, Argus, Agent-S, and human approval. | productivity |
+| [`teams-commander`](./plugins/teams-commander) | Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open them in Teams for you to send. | productivity |
+
+Platform-neutral skills for Claude Code and Codex live in [`skills/`](./skills), each
+registered for Codex under `.agents/skills/`:
+
+| Skill | What it does |
 |---|---|
-| [`custom-statusline`](./plugins/custom-statusline) | Cross-platform Claude Code renderer and native Codex footer adapter. | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — built from scratch from what Claude Code's own statusline payload already provides. |
-| [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing tasks across deterministic tools, decision models, Argus, Agent-S, and human approval. |
+| [`custom-statusline`](./skills/custom-statusline) | Configure the custom status line for Claude Code or Codex. |
+| [`logo-design-agency`](./skills/logo-design-agency) | Agency logo and identity work with provenance, confidentiality and trademark controls. |
+| [`open-source-stack-catalog`](./skills/open-source-stack-catalog) | Provenance-pinned records for reviewing and adopting open-source projects. |
 
 The repository also includes a Codex-compatible package under
 [`codex-plugins/norn-agent`](./codex-plugins/norn-agent). Both integrations use
@@ -54,6 +64,8 @@ the same external [Norn runtime](https://github.com/nasimubd/norn).
 .mise/tasks/           # runnable tasks; the release pipeline lives here
 scripts/               # gates and release tooling
 plugins/               # one directory per plugin
+skills/                # platform-neutral Agent Skills (Claude Code and Codex)
+.agents/skills/        # Codex registration: one symlink per skills/ entry
 codex-plugins/         # Codex-compatible plugin packages
 docs/                  # ADRs, design specs, release workflow
 ```
@@ -64,6 +76,7 @@ docs/                  # ADRs, design specs, release workflow
 node scripts/validate-plugins.mjs        # manifests, schema, paths, dependencies
 node scripts/check-version-equality.mjs  # the version lockstep actually holds
 node scripts/validate-skill-body.mjs     # SKILL.md structural contract
+node scripts/validate-agent-skills.mjs   # shared skills: contract and .agents/skills registration
 mise run release:preflight               # everything, plus tree and commit state
 ```
 
@@ -105,8 +118,9 @@ no longer has. `validate-skill-body.mjs` treats a mismatch as an error.
 
 **`${CLAUDE_PLUGIN_ROOT}` is valid only in manifests** — `hooks.json`, `.mcp.json`,
 `.lsp.json`. It is not a shell variable, it never reaches the Bash tool, and a `SKILL.md`
-that references it silently receives an empty string. Use `skills-plugin-root <plugin>`
-in skill bodies.
+that references it silently receives an empty string. Ship the plugin's command in
+`bin/<plugin>` instead: Claude Code puts an enabled plugin's `bin/` on the Bash PATH,
+so skill bodies call it by name.
 
 ## Versioning
 

@@ -17,30 +17,45 @@ node scripts/validate-plugins.mjs
 
 **Checklist:**
 
-- [ ] Directory exists at `plugins/<name>/` — lowercase, kebab-case
-- [ ] Entry added to `.claude-plugin/marketplace.json` with the current marketplace version
+- [ ] Directory exists at `plugins/<name>/` — lowercase, kebab-case, named per the hub's
+      naming table (`<service>-commander`, `<area>-tools`, or a descriptive noun)
+- [ ] Entry added to `.claude-plugin/marketplace.json` with the current marketplace
+      version and an **existing** category (the hub lists them; never add one)
 - [ ] `plugins/<name>/plugin.json` carries **no** `version` key
-- [ ] `plugins/<name>/CLAUDE.md` written
+- [ ] `plugins/<name>/README.md` and `plugins/<name>/CLAUDE.md` written
+- [ ] Service-backed plugin: `setup` and `health` skills present
+- [ ] Tests at `plugins/<name>/tests/test-*.sh`, printing `N passed, M failed`
+- [ ] Root `README.md` plugin table and the list below updated
 - [ ] `node scripts/validate-plugins.mjs` passes
 - [ ] `node scripts/check-version-equality.mjs` passes
 - [ ] `node scripts/validate-skill-body.mjs` passes
+- [ ] `mise run test-marketplace-hook-regression-suite` passes
 
-When the first plugin lands, flip `plugins.minItems` in `scripts/marketplace.schema.json`
-from `0` back to `1`. It is `0` only so the gates can pass on an empty marketplace.
+## All plugins
+
+Each plugin's own CLAUDE.md is the source of truth for its invariants. Keep this list
+alphabetical and in step with `.claude-plugin/marketplace.json`.
+
+- [custom-statusline](./custom-statusline/CLAUDE.md): Claude Code status line and Codex footer (productivity)
+- [norn-agent](./norn-agent/CLAUDE.md): install and operate the Norn runtime (productivity)
+- [teams-commander](./teams-commander/CLAUDE.md): evidence-gated Teams message drafts, sent by deep link (productivity)
 
 ## Structure
 
 ```
 plugins/<name>/
 ├── plugin.json           # {name, description, author{name,url}} — NO version key
+├── bin/<name>            # the plugin's command; Claude Code adds bin/ to the Bash PATH
 ├── README.md             # user-facing, for someone browsing the repo
 ├── CLAUDE.md             # maintainer SSoT — invariants, decisions, "don't touch this"
 ├── skills/
 │   └── <skill>/
 │       ├── SKILL.md      # the only capability file; dir name IS the command name
 │       └── references/   # loaded on demand; required once SKILL.md exceeds 200 lines
+├── references/           # optional plugin-wide references shared by several skills
 ├── scripts/              # backing executables
 ├── hooks/hooks.json      # optional; the only place ${CLAUDE_PLUGIN_ROOT} is valid
+├── tests/test-*.sh       # auto-discovered by the regression suite
 └── lib/                  # optional plugin-scoped shared modules
 ```
 
@@ -96,8 +111,7 @@ allowed-tools: Read, Bash
 ## Execution
 
 ```bash
-ROOT="$(skills-plugin-root <plugin>)"
-bash "$ROOT/scripts/thing.sh"
+<plugin> thing          # bin/<plugin>, on the Bash PATH while the plugin is enabled
 ```
 
 ## Troubleshooting
