@@ -42,6 +42,18 @@
         "url": "https://github.com/nasimubd"
       },
       "keywords": ["teams", "microsoft-teams", "messaging", "evidence", "provenance", "deep-link", "developer-productivity"]
+    },
+    {
+      "name": "automation-scaffold",
+      "description": "Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release.",
+      "version": "1.3.0",
+      "source": "./plugins/automation-scaffold",
+      "category": "devops",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": ["scaffold", "power-platform", "power-apps", "power-automate", "n8n", "make", "zapier", "semantic-release", "conventional-commits"]
     }
   ]
 }
