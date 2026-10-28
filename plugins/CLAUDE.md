@@ -36,6 +36,7 @@ node scripts/validate-plugins.mjs
 Each plugin's own CLAUDE.md is the source of truth for its invariants. Keep this list
 alphabetical and in step with `.claude-plugin/marketplace.json`.
 
+- [automation-scaffold](./automation-scaffold/CLAUDE.md): scaffold, release and verify automation repositories from production (devops)
 - [custom-statusline](./custom-statusline/CLAUDE.md): Claude Code status line and Codex footer (productivity)
 - [norn-agent](./norn-agent/CLAUDE.md): install and operate the Norn runtime (productivity)
 - [teams-commander](./teams-commander/CLAUDE.md): evidence-gated Teams message drafts, sent by deep link (productivity)

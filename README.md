@@ -28,6 +28,7 @@ is stale.
 
 | Plugin | What it does | Category |
 |---|---|---|
+| [`automation-scaffold`](./plugins/automation-scaffold) | Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release. | devops |
 | [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — with a native Codex footer adapter. | productivity |
 | [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing tasks across deterministic tools, decision models, Argus, Agent-S, and human approval. | productivity |
 | [`teams-commander`](./plugins/teams-commander) | Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open them in Teams for you to send. | productivity |
