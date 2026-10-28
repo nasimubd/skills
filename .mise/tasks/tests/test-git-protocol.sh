@@ -61,7 +61,9 @@ for f in commitlint.config.cjs scripts/no-ai-attribution.cjs .mise/tasks/pr/chec
 G=(git -C "$C" -c user.name=Test -c user.email=test@example.com -c core.hooksPath=/dev/null)
 "${G[@]}" add -A && "${G[@]}" commit -q -m "chore(repo): bring the protocol files into the test clone"
 # The clone is its own origin, so `pr:check`'s `git fetch origin main` works offline.
-git -C "$C" branch -f main HEAD
+# checkout -B, not branch -f: the clone is on whatever branch this repository is on, often
+# main itself, and git refuses to force-move the branch that is checked out.
+git -C "$C" checkout -q -B main
 git -C "$C" update-ref refs/remotes/origin/main HEAD
 git -C "$C" config remote.origin.url "$C"
 prcheck() { (cd "$C" && MISE_PROJECT_ROOT="$C" bash .mise/tasks/pr/check "$@") >"$WORK/pr.out" 2>&1; }
