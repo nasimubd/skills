@@ -357,6 +357,21 @@ function traverse(seedKeys, edges, depth, nodes, { exclude = [], includeCopies =
   return dist;
 }
 
+const WRITERS = new Set(['writes-list', 'uses-list', 'touches-list']);
+
+function notFollowed(keep, edges, nodes, includeCopies) {
+  const out = new Map();
+  for (const e of edges) {
+    if (!WRITERS.has(e.relation) || keep.has(e.from) || !keep.has(e.to)) continue;
+    const n = nodes.get(e.from);
+    if (!n || (!includeCopies && COPY.test(n.name ?? ''))) continue;
+    const c = out.get(e.from) ?? { key: e.from, kind: n.kind, name: n.name, links: [] };
+    c.links.push({ relation: e.relation, list: e.to, evidence: e.evidence });
+    out.set(e.from, c);
+  }
+  return [...out.values()].sort((x, y) => x.name.localeCompare(y.name));
+}
+
 async function main() {
   const a = args();
   const inv = await inventory();
@@ -373,6 +388,10 @@ async function main() {
     skipped: inv.skipped,
     nodes: [...keep].map((k) => ({ ...nodes.get(k), distance: dist.get(k) })).sort((x, y) => x.distance - y.distance || x.kind.localeCompare(y.kind) || x.name.localeCompare(y.name)),
     edges: edges.filter((e) => keep.has(e.from) && keep.has(e.to)),
+    // Artifacts that write or touch a list in scope but were not followed (a list is never
+    // expanded back to its writers). Reported with evidence so the user can decide to add one
+    // as a --seed; never included automatically. Copies follow the same --include-copies rule.
+    notFollowed: notFollowed(keep, edges, nodes, a.includeCopies),
   };
   const text = `${JSON.stringify(result, null, 2)}\n`;
   if (a.out) fs.writeFileSync(a.out, text); else process.stdout.write(text);
@@ -383,6 +402,10 @@ async function main() {
   for (const s of inv.skipped) log(`  skipped: ${s}`);
   log(`Found ${result.nodes.length} related artifact(s) and ${result.edges.length} link(s) within depth ${a.depth}:`);
   for (const n of result.nodes) log(`  [${n.distance}] ${n.kind.padEnd(15)} ${n.name}`);
+  if (result.notFollowed.length) {
+    log(`Not followed: ${result.notFollowed.length} artifact(s) write or touch a list in scope (add with --seed to include):`);
+    for (const c of result.notFollowed) log(`  ${c.kind.padEnd(15)} ${c.name}  ${[...new Set(c.links.map((l) => `${l.relation} ${nodes.get(l.list)?.name ?? l.list}`))].join(', ')}`);
+  }
 }
 
 if (require.main === module) main().catch((e) => { console.error(`discover: ${e.message}`); process.exitCode = 1; });

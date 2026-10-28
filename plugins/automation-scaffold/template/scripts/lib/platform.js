@@ -273,13 +273,30 @@ function appFilesFromMsapp(bytes) {
   }
 }
 
-async function liveApp(appId) {
+/**
+ * The live version and its package bytes. The versions API returns the package link signed at
+ * publish time, which expires seven days later (an older app then fails with HTTP 403). The app
+ * endpoint signs the same blob afresh, so download from there, after checking it is the live
+ * version's blob.
+ */
+async function livePackage(appId) {
   const { value } = await getJson(`${PA_API}/apps/${appId}/versions?api-version=2016-11-01`, paAuth());
   const live = (value ?? []).find((v) => v.isLive);
-  if (!live) throw new Error(`app ${appId}: no live (published) version`);
-  const def = live.properties.appDefinition.properties;
-  const files = appFilesFromMsapp(await getBytes(def.appUris.documentUri.value));
-  return { version: live.name, at: def.lastPublishTime ?? def.appVersion ?? null, files };
+  if (!live) return null;
+  const app = await getJson(`${PA_API}/apps/${appId}?api-version=2016-11-01`, paAuth());
+  const blob = (u) => (u ? new URL(u).pathname : null);
+  const fresh = app.properties?.appUris?.documentUri?.value;
+  if (!fresh || blob(fresh) !== blob(live.properties.appDefinition.properties.appUris?.documentUri?.value)) {
+    throw new Error(`app ${appId}: the app's package is not the live version ${live.name}`);
+  }
+  return { live, bytes: await getBytes(fresh) };
+}
+
+async function liveApp(appId) {
+  const pkg = await livePackage(appId);
+  if (!pkg) throw new Error(`app ${appId}: no live (published) version`);
+  const def = pkg.live.properties.appDefinition.properties;
+  return { version: pkg.live.name, at: def.lastPublishTime ?? def.appVersion ?? null, files: appFilesFromMsapp(pkg.bytes) };
 }
 
 /**
@@ -288,10 +305,9 @@ async function liveApp(appId) {
  * The app list API only returns data source titles, so this file is the authoritative map.
  */
 async function liveAppDataSources(appId) {
-  const { value } = await getJson(`${PA_API}/apps/${appId}/versions?api-version=2016-11-01`, paAuth());
-  const live = (value ?? []).find((v) => v.isLive);
-  if (!live) return { version: null, dataSources: [], sources: [] };
-  const bytes = await getBytes(live.properties.appDefinition.properties.appUris.documentUri.value);
+  const pkg = await livePackage(appId);
+  if (!pkg) return { version: null, dataSources: [], sources: [] };
+  const { live, bytes } = pkg;
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'msapp-'));
   try {
     const file = path.join(tmp, 'app.msapp');

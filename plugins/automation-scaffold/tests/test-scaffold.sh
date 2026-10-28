@@ -103,10 +103,13 @@ printf '{"data": [%s, {"id": "wf2", "name": "Unrelated Workflow", "nodes": [{"na
 printf '%s\n' "$WF1" >"$FX/n8n-wf1.json"
 cat >"$FX/versions.json" <<'EOF'
 {"value": [
-  {"name": "20261026T100000Z", "isLive": false, "properties": {"appDefinition": {"properties": {"appUris": {"documentUri": {"value": "https://blob.example/old.msapp"}}}}}},
-  {"name": "20261027T100000Z", "isLive": true, "properties": {"appDefinition": {"properties": {"lastPublishTime": "2026-10-27T10:00:00Z", "appUris": {"documentUri": {"value": "https://blob.example/app.msapp"}}}}}}
+  {"name": "20261026T100000Z", "isLive": false, "properties": {"appDefinition": {"properties": {"appUris": {"documentUri": {"value": "https://blob.example/old.msapp?se=expired"}}}}}},
+  {"name": "20261027T100000Z", "isLive": true, "properties": {"appDefinition": {"properties": {"lastPublishTime": "2026-10-27T10:00:00Z", "appUris": {"documentUri": {"value": "https://blob.example/app.msapp?se=expired"}}}}}}
 ]}
 EOF
+# The versions API's link was signed at publish time and expires after seven days; the app
+# endpoint signs the same blob afresh. Only the fresh link has a fixture route.
+printf '{"name": "%s", "properties": {"appUris": {"documentUri": {"value": "https://blob.example/app.msapp?se=fresh"}}}}\n' "$APP" >"$FX/app-one.json"
 # As Power Apps writes packages: backslash entry names, lists and called flows in
 # References\DataSources.json (the app list API carries data source titles only).
 python3 -I - "$FX/app.msapp" "$LIST" "$F1" <<'PY'
@@ -133,7 +136,8 @@ cat >"$FX/routes.json" <<EOF
 [
   {"match": "/apps?api-version", "file": "apps.json"},
   {"match": "/apps/$APP/versions", "file": "versions.json"},
-  {"match": "blob.example/app.msapp", "file": "app.msapp"},
+  {"match": "/apps/$APP?api-version", "file": "app-one.json"},
+  {"match": "blob.example/app.msapp?se=fresh", "file": "app.msapp"},
   {"match": "search('team')", "file": "flows-team.json"},
   {"match": "/flows/$F1?", "file": "flow-1.json"},
   {"match": "/flows/$F2?", "file": "flow-2.json"},
@@ -155,6 +159,7 @@ names="$(jq -r '.nodes[].name' "$DISC" | LC_ALL=C sort | tr '\n' '|')"
 assert_eq "exactly the related artifacts" "Client Intake|Client Intake List|Lookup List|New Client Webhook|Notify On New Item|Submit Intake|https://hooks.zapier.com/hooks/catch/123456/…/|" "$names"
 assert_lacks "a sibling app sharing the list is not pulled in" "Sibling App" "$names"
 assert_lacks "[OPT] copies are left out by default" "[OPT]" "$names"
+assert_eq "a sibling writer of a list in scope is reported, not followed" "Sibling App uses-list" "$(jq -r '.notFollowed[] | "\(.name) \(.links[0].relation)"' "$DISC")"
 assert_has "--include-copies brings copies in" "[OPT] Notify On New Item" "$(bash "$CLI" discover --seed "client intake" --include-copies 2>/dev/null | jq -r '.nodes[].name')"
 ex="$(bash "$CLI" discover --seed "client intake" --exclude "Notify On New Item" 2>/dev/null | jq -r '.nodes[].name')"
 assert_lacks "--exclude drops the artifact" "Notify On New Item" "$ex"
@@ -176,6 +181,13 @@ assert_eq "webhook evidence names the node path" "n8n:wf1 \$.nodes[0].parameters
 assert_lacks "zapier hook key is masked" "abcdef" "$(jq -r '.nodes[].name' "$DISC")"
 assert_eq "depth 0 keeps only the seed" "1" "$(bash "$CLI" discover --seed "$APP" --depth 0 2>/dev/null | jq '.nodes | length')"
 assert_eq "unknown seed fails" "1" "$(status_of bash "$CLI" discover --seed "does not exist")"
+
+# ---- app package: refuse a fresh link that is not the live version's blob ----
+MIS="$WORK/fx-mismatch"; cp -R "$FX" "$MIS"
+printf '{"properties": {"appUris": {"documentUri": {"value": "https://blob.example/other.msapp?se=fresh"}}}}\n' >"$MIS/app-one.json"
+MSG=$(PLATFORM_FIXTURES="$MIS" node -e 'require(process.argv[1]).liveApp(process.argv[2]).then(() => console.log("downloaded"), (e) => console.log(e.message))' \
+  "$PLUGIN_ROOT/template/scripts/lib/platform.js" "$APP" 2>&1)
+[[ "$MSG" == *"is not the live version 20261027T100000Z"* ]] && ok || bad "a package that is not the live version is refused: $MSG"
 
 # ---- scaffold ----
 REPO="$WORK/repo"
