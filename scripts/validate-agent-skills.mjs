@@ -4,10 +4,11 @@
  *
  * Claude plugin validation remains separate because Claude has additional
  * packaging rules. This gate checks only the shared contract: directory name,
- * required frontmatter, and progressive-disclosure references for long bodies.
+ * required frontmatter, progressive-disclosure references for long bodies, and
+ * registration under .agents/skills/ (how Codex discovers repository skills).
  */
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 const root = resolve(process.cwd());
@@ -54,8 +55,33 @@ for (const skill of skills) {
   }
 }
 
+// Codex discovers repository skills under .agents/skills/. A shared skill with no
+// link there is invisible to Codex while every other check still passes, so the
+// registration is checked here: each skills/<name> needs .agents/skills/<name>
+// resolving to it, and every link there must resolve to a shared skill.
+const registryRoot = join(root, ".agents", "skills");
+let registered = 0;
+for (const skill of skills) {
+  const link = join(registryRoot, skill.name);
+  if (!existsSync(link)) {
+    errors.push(`.agents/skills/${skill.name}: missing — link it to ../../skills/${skill.name}`);
+  } else if (realpathSync(link) !== realpathSync(join(skillsRoot, skill.name))) {
+    errors.push(`.agents/skills/${skill.name}: does not resolve to skills/${skill.name}`);
+  } else {
+    registered++;
+  }
+}
+if (existsSync(registryRoot)) {
+  for (const entry of readdirSync(registryRoot)) {
+    if (!skills.some(skill => skill.name === entry)) {
+      errors.push(`.agents/skills/${entry}: no matching skills/${entry}/SKILL.md (dangling registration)`);
+    }
+  }
+}
+
 console.log("AGENT SKILLS CONTRACT");
 console.log(`Skills discovered: ${skills.length}`);
+console.log(`Registered:        ${registered}`);
 console.log(`Errors:            ${errors.length}`);
 for (const error of errors) console.error(`  ✗ ${error}`);
 if (errors.length) process.exit(1);
