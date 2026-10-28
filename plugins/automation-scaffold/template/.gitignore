@@ -1,0 +1,17 @@
+.env
+*.local.json
+.DS_Store
+node_modules/
+~$*
+
+# Office/PDF files and app packages may hold client data or whole binary apps; keep local.
+*.docx
+*.doc
+*.pdf
+*.msapp
+*.msapr
+
+# Scratch, run output and build output
+tmp/
+reports/runs/
+dist/
