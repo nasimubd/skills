@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# Reject commit messages that aren't Conventional Commits or that carry AI attribution
+# (docs/RELEASE.md, CLAUDE.md). Installed by `mise run setup` (core.hooksPath .githooks).
+exec npx --no-install commitlint --edit "$1"
