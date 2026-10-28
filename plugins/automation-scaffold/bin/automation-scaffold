@@ -6,7 +6,7 @@
 #   automation-scaffold health
 #   automation-scaffold discover --seed "<name or id>" [--seed ...] [--depth N] [--out file]
 #   automation-scaffold scaffold --dir <repo> --name <slug> [--discovery file] [...]
-#   automation-scaffold publish repo|pr|release --dir <repo> [--repo owner/name] [--yes]
+#   automation-scaffold publish repo|pr|about|release --dir <repo> [--repo owner/name] [--yes]
 
 set -euo pipefail
 

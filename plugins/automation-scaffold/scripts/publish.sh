@@ -11,6 +11,13 @@
 #       (repo scaffold, one commit per component, docs), run `mise run pr:check` with the PR
 #       title and body, push, open the PR, rebase-and-merge it, and sync main.
 #
+#   publish.sh about   --dir <path> [--yes | --check]
+#       Set the GitHub repository's About from project.json `github`: the description when
+#       GitHub's is empty (an existing one is kept and reported), and every listed topic
+#       (topics are only added). The repository is project.json `github.repo` or the clone's
+#       origin. Run by `pr` after the merge. `--check` changes nothing and exits 1 unless
+#       the description is set and every listed topic is present.
+#
 #   publish.sh release --dir <path> [--yes]
 #       On the synced main: `mise run release:dry`, `mise run release`, then verify: registry,
 #       one v1.0.0 tag and GitHub Release per pinned component, production vs pins, and no AI
@@ -31,17 +38,18 @@ usage() { die "usage: $1" 2; }
 say() { echo "• $*"; }
 
 phase="${1:-}"; shift || true
-repo="" dir="" description="" yes=false
+repo="" dir="" description="" yes=false check=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo) repo="$2"; shift 2 ;;
     --dir) dir="$2"; shift 2 ;;
     --description) description="$2"; shift 2 ;;
     --yes) yes=true; shift ;;
+    --check) check=true; shift ;;
     *) usage "unknown option '$1'" ;;
   esac
 done
-[[ -n "$dir" ]] || usage "$SELF repo|pr|release --dir <path> ..."
+[[ -n "$dir" ]] || usage "$SELF repo|pr|about|release --dir <path> ..."
 
 [[ -f "$CONFIG" ]] || die "no config at $CONFIG (run the setup skill)" 3
 author_name="$(jq -r '.author.name // empty' "$CONFIG")"
@@ -137,8 +145,12 @@ phase_pr() {
     while IFS=$'\t' read -r id p dn; do
       git -C "$dir" add -A -- "$p"
       if ! git -C "$dir" diff --cached --quiet; then
-        "${GIT[@]}" -C "$dir" commit -q -m "feat($id): add $dn from production" \
-          -m "Source exported read-only from production and pinned in release.lock.json."
+        # commitlint caps the header at 72 characters; a long name moves to the body.
+        local subject="feat($id): add $dn from production"
+        (( ${#subject} <= 72 )) || subject="feat($id): add from production"
+        (( ${#subject} <= 72 )) || die "component id $id is too long for a 72-character commit header" 3
+        "${GIT[@]}" -C "$dir" commit -q -m "$subject" \
+          -m "Adds $dn. Source exported read-only from production and pinned in release.lock.json."
       fi
     done < <(jq -r '.components[] | "\(.id)\t\(.path)\t\(.displayName)"' "$dir/releases/components.json")
     # 3. Generated documentation.
@@ -160,11 +172,53 @@ phase_pr() {
     git -C "$dir" pull -q --ff-only origin main
     [[ "$(cd "$dir" && gh pr view "$number" --json state -q .state)" == "MERGED" ]] || die "PR #$number did not merge"
     say "PR #$number rebased and merged; main is at $(git -C "$dir" log --oneline -1)"
+    phase_about
   else
     say "would commit: chore(repo) scaffold · one feat(<id>) per component · docs"
     say "would run: mise run pr:check -- \"$title\" <body>, push $branch, gh pr create, gh pr merge --rebase --delete-branch"
+    say "would then set the repository's About (publish about): description and topics from project.json"
   fi
   rm -f "$body"
+}
+
+# owner/name of the repository: the one recorded at scaffold time, else the clone's origin.
+repo_of_dir() {
+  local r
+  r="$(jq -r '.github.repo // empty' "$dir/project.json")"
+  [[ -n "$r" ]] || r="$(cd "$dir" && gh repo view --json nameWithOwner -q .nameWithOwner)"
+  printf '%s' "$r"
+}
+
+phase_about() {
+  [[ -f "$dir/project.json" ]] || die "$dir is not scaffolded yet (run scaffold.js first)" 3
+  local r want current topics missing=()
+  r="$(repo_of_dir)"
+  [[ -n "$r" ]] || die "cannot tell which GitHub repository $dir belongs to" 3
+  if $check; then
+    if verify_about; then say "About of $r: description and every topic set"; return 0; fi
+    say "About of $r: description empty or a topic missing"; return 1
+  fi
+  want="$(jq -r '.github.description // empty' "$dir/project.json")"
+  current="$(gh repo view "$r" --json description -q '.description // ""')"
+  topics="$(gh repo view "$r" --json repositoryTopics -q '[.repositoryTopics[]?.name] | join(" ")')"
+  while IFS= read -r t; do [[ -n "$t" && " $topics " != *" $t "* ]] && missing+=("$t"); done \
+    < <(jq -r '.github.topics[]? // empty' "$dir/project.json")
+  local args=()
+  if [[ -z "$current" && -n "$want" ]]; then args+=(--description "$want"); say "description: $want"
+  elif [[ -n "$current" && "$current" != "$want" ]]; then say "description kept (already set on GitHub): $current"
+  fi
+  local t
+  for t in ${missing[@]+"${missing[@]}"}; do args+=(--add-topic "$t"); done
+  (( ${#missing[@]} )) && say "topics to add: ${missing[*]}"
+  if (( ${#args[@]} )); then step gh repo edit "$r" ${args[@]+"${args[@]}"}; else say "About of $r already up to date"; fi
+}
+
+# The About is set: a description, and every topic project.json lists.
+verify_about() {
+  local r
+  r="$(repo_of_dir)"
+  gh repo view "$r" --json description,repositoryTopics | jq -e --slurpfile p "$dir/project.json" \
+    '(.description // "") != "" and (([$p[0].github.topics[]?] - [.repositoryTopics[]?.name]) | length == 0)' >/dev/null
 }
 
 phase_release() {
@@ -191,6 +245,7 @@ phase_release() {
     if [[ -z "$tag" ]]; then echo "  ✗ $id: no release tag"; fails=$((fails + 1)); continue; fi
     if (cd "$dir" && gh release view "$tag" --json tagName >/dev/null 2>&1); then echo "  ✓ $id: $tag with GitHub Release"; else echo "  ✗ $id: $tag has no GitHub Release"; fails=$((fails + 1)); fi
   done < <(jq -r '.components[] | "\(.id)\t\(.path)"' "$dir/releases/components.json")
+  if verify_about; then echo "  ✓ repository About has a description and every topic"; else echo "  ✗ repository About is missing its description or a topic (publish about)"; fails=$((fails + 1)); fi
   if (cd "$dir" && node scripts/release-pin.js verify); then echo "  ✓ production matches every pin"; else echo "  ✗ production differs from a pin"; fails=$((fails + 1)); fi
   if node "$dir/scripts/no-ai-attribution.js" <<<"$(git -C "$dir" log --format='%an <%ae>%n%cn <%ce>%n%B' origin/main)"; then echo "  ✓ no AI attribution in history"; else fails=$((fails + 1)); fi
   echo "Components checked: $checked · problems: $fails"
@@ -201,5 +256,6 @@ case "$phase" in
   repo) phase_repo ;;
   pr) phase_pr ;;
   release) phase_release ;;
-  *) usage "$SELF repo|pr|release --dir <path> [--repo owner/name] [--yes]" ;;
+  about) phase_about ;;
+  *) usage "$SELF repo|pr|about|release --dir <path> [--repo owner/name] [--yes]" ;;
 esac

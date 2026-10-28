@@ -63,7 +63,8 @@ Work out:
 
 Then ask the user to approve, in one question, every action the run will take: create the
 repository (only if missing), clone it, write the scaffold, install dev dependencies, commit,
-push, open the PR, **rebase and merge** it, run `mise run release`, and verify. Nothing past
+push, open the PR, **rebase and merge** it, set the repository's About (description and
+topics), run `mise run release`, and verify. Nothing past
 this point runs without that approval.
 
 ### 4. Run
@@ -81,8 +82,12 @@ automation-scaffold publish release --dir "$D" --yes
   and stops the run. Never hand-edit an export to make it pass.
 - `publish pr` commits in convention order (scaffold, one `feat(<id>)` per component,
   docs), runs `mise run pr:check` on the commits, PR title and body, then rebase-merges.
+  It then sets the GitHub About from `project.json` `github`: the description (only if GitHub's
+  is empty; an existing one is kept and reported) and the topics (added, never removed).
+  `publish about --dir "$D" --yes` applies it alone, for a repository scaffolded earlier.
 - `publish release` cuts `v1.0.0` for every pinned component and verifies tags, GitHub
-  Releases, production against the pins, and that no commit carries AI attribution.
+  Releases, the About (description and topics), production against the pins, and that no
+  commit carries AI attribution.
 
 ### 5. Report
 
