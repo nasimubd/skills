@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# teams-commander — the plugin's single command. Claude Code puts a plugin's bin/
+# on the Bash tool's PATH while the plugin is enabled, so skills call this by
+# name instead of resolving the plugin's install path.
+
+set -euo pipefail
+
+src="${BASH_SOURCE[0]}"
+while [[ -L "$src" ]]; do
+  dir="$(cd "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ "$src" == /* ]] || src="$dir/$src"
+done
+root="$(cd "$(dirname "$src")/.." && pwd)"
+
+exec bash "$root/scripts/teams.sh" "$@"
