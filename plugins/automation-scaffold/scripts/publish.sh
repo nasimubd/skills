@@ -55,7 +55,11 @@ done
 author_name="$(jq -r '.author.name // empty' "$CONFIG")"
 author_email="$(jq -r '.author.email // empty' "$CONFIG")"
 [[ -n "$author_name" && -n "$author_email" ]] || die "config.author.name and .email are required (setup skill)" 3
-GIT=(git -c "user.name=$author_name" -c "user.email=$author_email")
+# The env pins win over GIT_AUTHOR_*/GIT_COMMITTER_* inherited from the caller (semantic-release
+# exports them), which would otherwise override user.name/user.email.
+GIT=(env GIT_AUTHOR_NAME="$author_name" GIT_AUTHOR_EMAIL="$author_email"
+  GIT_COMMITTER_NAME="$author_name" GIT_COMMITTER_EMAIL="$author_email"
+  git -c "user.name=$author_name" -c "user.email=$author_email")
 
 # Run a step, or only print it without --yes.
 step() {
