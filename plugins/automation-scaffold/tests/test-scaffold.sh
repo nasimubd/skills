@@ -304,11 +304,14 @@ esac
 EOF
 chmod +x "$WORK/bin/gh"
 CLONE="$WORK/workspace/real-order"
-PATH="$WORK/bin:$PATH" bash "$CLI" publish repo --repo example-owner/real-order --dir "$CLONE" --yes >/dev/null
+# A caller's GIT_AUTHOR_*/GIT_COMMITTER_* (semantic-release exports them) must not replace the author.
+GIT_AUTHOR_NAME=other-bot GIT_AUTHOR_EMAIL=bot@example.com GIT_COMMITTER_NAME=other-bot GIT_COMMITTER_EMAIL=bot@example.com \
+  PATH="$WORK/bin:$PATH" bash "$CLI" publish repo --repo example-owner/real-order --dir "$CLONE" --yes >/dev/null
 assert_eq "initial commit is empty and conventional" "chore(repo): initialize repository|0" \
   "$(git -C "$CLONE" log -1 --format=%s)|$(git -C "$CLONE" ls-tree -r HEAD | wc -l | tr -d ' ')"
 assert_eq "initial commit was pushed to main" "$(git -C "$CLONE" rev-parse HEAD)" "$(git -C "$WORK/remotes/example-owner/real-order.git" rev-parse main)"
-assert_eq "initial commit is authored by the configured author" "Test Author <test@example.com>" "$(git -C "$CLONE" log -1 --format='%an <%ae>')"
+assert_eq "initial commit is authored and committed by the configured author" "Test Author <test@example.com>|Test Author <test@example.com>" \
+  "$(git -C "$CLONE" log -1 --format='%an <%ae>|%cn <%ce>')"
 bash "$CLI" scaffold --dir "$CLONE" --name real-order --discovery "$DISC" --no-export >/dev/null 2>&1
 assert_has "the real README is written, not a stub" "## Components" "$(cat "$CLONE/README.md")"
 assert_eq "nothing was kept in a fresh clone" "[]" "$(bash "$CLI" scaffold --dir "$WORK/workspace/fresh" --name fresh --no-export 2>/dev/null | jq -c .kept)"
