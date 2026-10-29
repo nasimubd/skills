@@ -67,6 +67,11 @@
   one factual sentence counted from the registered components; topics come from the component
   kinds plus the release convention, never from names. An existing description is kept, and
   topics are only added. `publish release` fails verification while the About is incomplete.
+- **`publish about` checks the role before editing, and refuses a missing `github` block**
+  (2026-10-29, first live run on a repo scaffolded before the About existed). GitHub lets only
+  Maintain or Admin edit the About and answers write-only collaborators with a bare 404, so
+  `--yes` checks `permissions` first and prints the exact `gh repo edit` for the owner. A
+  `project.json` without `github.description`/`topics` used to report "already up to date".
 - **`publish.sh` refuses to write without `--yes`.** The skill asks the user once for the
   whole plan, then passes `--yes`; without it every phase prints its plan.
 
