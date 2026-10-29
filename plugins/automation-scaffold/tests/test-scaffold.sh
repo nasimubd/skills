@@ -270,6 +270,7 @@ case "\$*" in
   *"--json description"*) echo "\$GH_DESC" ;;
   *repositoryTopics*) echo "\$GH_TOPICS" ;;
   "repo edit"*) echo "gh \$*" >>"$WORK/gh-edit.log" ;;
+  "api repos/"*) echo "\${GH_CAN_EDIT:-true}" ;;
 esac
 EOF
 chmod +x "$WORK/bin/gh"
@@ -286,6 +287,17 @@ assert_has "with --yes the topics are applied" "gh repo edit example-owner/clien
 all="power-platform power-apps power-automate n8n automation semantic-release conventional-commits"
 assert_has "nothing to do when the About is complete" "already up to date" "$(about "Written by hand" "$all" --yes)"
 verify() { about "$1" "$2" --check >/dev/null && echo pass || echo fail; }
+rm -f "$WORK/gh-edit.log"
+out="$(GH_CAN_EDIT=false about "" "" --yes)" || true
+assert_has "without Maintain or Admin the edit is refused with the reason" "not Maintain or Admin on example-owner/client-intake" "$out"
+assert_has "the refusal gives the owner the exact command" "gh repo edit example-owner/client-intake --description" "$out"
+assert_eq "nothing is edited without the role" "no" "$([[ -e "$WORK/gh-edit.log" ]] && echo yes || echo no)"
+cp "$REPO/project.json" "$WORK/project.json.bak"
+jq 'del(.github)' "$WORK/project.json.bak" >"$REPO/project.json"
+out="$(about "" "" --yes)" || true
+assert_has "a project.json without a github block is reported" "has no github.description or github.topics" "$out"
+assert_lacks "it is not called up to date" "already up to date" "$out"
+cp "$WORK/project.json.bak" "$REPO/project.json"
 assert_eq "verification passes with a description and every topic" "pass" "$(verify "x" "$all")"
 assert_eq "verification fails on an empty description" "fail" "$(verify "" "$all")"
 assert_eq "verification fails on a missing topic" "fail" "$(verify "x" "n8n")"

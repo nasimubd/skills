@@ -203,6 +203,9 @@ phase_about() {
     say "About of $r: description empty or a topic missing"; return 1
   fi
   want="$(jq -r '.github.description // empty' "$dir/project.json")"
+  # A repo scaffolded before the About existed has no github block: say so, not "up to date".
+  [[ -n "$want" || "$(jq '[.github.topics[]?] | length' "$dir/project.json")" != 0 ]] \
+    || die "$dir/project.json has no github.description or github.topics; add a github block {repo, description, topics} (scaffold.js describe/topicsFor)" 3
   current="$(gh repo view "$r" --json description -q '.description // ""')"
   topics="$(gh repo view "$r" --json repositoryTopics -q '[.repositoryTopics[]?.name] | join(" ")')"
   while IFS= read -r t; do [[ -n "$t" && " $topics " != *" $t "* ]] && missing+=("$t"); done \
@@ -214,7 +217,12 @@ phase_about() {
   local t
   for t in ${missing[@]+"${missing[@]}"}; do args+=(--add-topic "$t"); done
   (( ${#missing[@]} )) && say "topics to add: ${missing[*]}"
-  if (( ${#args[@]} )); then step gh repo edit "$r" ${args[@]+"${args[@]}"}; else say "About of $r already up to date"; fi
+  if (( ! ${#args[@]} )); then say "About of $r already up to date"; return 0; fi
+  # GitHub lets only Maintain or Admin edit the About, and answers anyone else with a bare 404.
+  if $yes && [[ "$(gh api "repos/$r" -q '.permissions.admin or .permissions.maintain')" != "true" ]]; then
+    die "the gh account has write but not Maintain or Admin on $r, which editing the About needs. Ask the owner for the Maintain role, or to run: gh repo edit $r$(printf ' %q' ${args[@]+"${args[@]}"})" 3
+  fi
+  step gh repo edit "$r" ${args[@]+"${args[@]}"}
 }
 
 # The About is set: a description, and every topic project.json lists.
