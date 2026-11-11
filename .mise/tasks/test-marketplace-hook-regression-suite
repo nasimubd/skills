@@ -74,10 +74,10 @@ echo ""
 #      belongs outside any single plugin's scope.
 #
 # Sorted for stable output and reproducible test order across both paths.
-TEST_FILES=()
-while IFS= read -r test_file; do
-    [ -f "$test_file" ] && TEST_FILES+=("$test_file")
-done < <({
+# The discovery lives in a function, not inline in `< <( ... )`: bash 3.2 (the macOS
+# /bin/bash) cannot parse a comment containing parentheses or an apostrophe inside a
+# process substitution and stops the whole script with "bad substitution".
+discover_test_files() {
     # Bounded depth is a perf property, not a stylistic one: without it, find
     # descends into every plugin's skills/, scripts/, references/ and
     # node_modules/. -mindepth 3 catches <plugin>/tests/<file>; -maxdepth 4
@@ -87,7 +87,12 @@ done < <({
          -name 'test-*.sh' -path '*/tests/*' 2>/dev/null
     find "$REPO_ROOT/.mise/tasks/tests" -maxdepth 1 -name 'test-*.sh' -type f 2>/dev/null
     find "$REPO_ROOT/scripts/tests" -maxdepth 1 -name 'test-*.sh' -type f 2>/dev/null
-} | sort)
+}
+
+TEST_FILES=()
+while IFS= read -r test_file; do
+    [ -f "$test_file" ] && TEST_FILES+=("$test_file")
+done < <(discover_test_files | sort)
 
 # ANTI-FALSE-GREEN PROPERTY 2 — EMPTY DISCOVERY IS FAILURE.
 #
