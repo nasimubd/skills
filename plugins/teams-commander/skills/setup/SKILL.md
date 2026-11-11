@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Use when the user wants to set up teams-commander or add, change or list Teams contacts and the tenant id. Writes only the local contacts file. TRIGGERS - teams contacts, add contact, setup teams
+description: Use when the user wants to set up teams-commander or add, change or list Teams contacts, the tenant id or message style. Writes only local files. TRIGGERS - teams contacts, teams style
 allowed-tools: Bash, Read
 argument-hint: [alias email]
 ---
@@ -48,6 +48,21 @@ Only needed if links land in the wrong organisation.
 teams-commander contact tenant <tenant-guid>
 ```
 
+### Optional: message style
+
+Personal style rules are stored in `~/.config/teams-commander/style.json` (this machine
+only, never committed) and enforced by `verify`: a message that breaks them cannot be
+opened. Set one when the user corrects a draft, not before.
+
+```bash
+teams-commander style show                                   # current settings
+teams-commander style bold never                             # refuse **bold** markers
+teams-commander style ban POC --use "engagement letter"      # refuse a word, say what to write
+teams-commander style unban POC
+```
+
+Banned terms match whole words, in any case; a term may be several words.
+
 Finish with the `health` skill.
 
 ## Troubleshooting
@@ -56,6 +71,7 @@ Finish with the `health` skill.
 |---|---|---|
 | `not an email/UPN` | Typo or display name given | Use the address exactly as in the directory |
 | `alias must be lowercase` | Capitals or spaces | Use `jona`, `alex`, `ops-review` |
+| `verify` refuses with `style:` lines | A style rule matched the message | Fix the message, or change the rule with `style unban` / `style bold allow` |
 
 ## Post-Execution Reflection
 
