@@ -33,12 +33,43 @@ RED='\033[91m'
 GREEN='\033[92m'
 CYAN='\033[96m'
 
+# Claude Code spawns the statusLine command with a minimal PATH, not the
+# interactive shell's. `gh` lives only where Homebrew or Linuxbrew put it,
+# unlike `jq` and `git`, which ship system-wide on macOS. Without this the
+# visibility badge silently disappears: not an error, just quietly wrong.
+for _csl_bin_dir in /opt/homebrew/bin /usr/local/bin /home/linuxbrew/.linuxbrew/bin "$HOME/.local/bin"; do
+    [ -d "$_csl_bin_dir" ] && PATH="$_csl_bin_dir:$PATH"
+done
+export PATH
+unset _csl_bin_dir
+
+# Runs a command with a time limit. macOS ships no `timeout`, so use
+# timeout or gtimeout when present and fall back to a background watchdog.
+# Calling a missing `timeout` made every gh lookup fail, even with gh found.
+with_timeout() {
+    local secs="$1"; shift
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$secs" "$@"
+    elif command -v gtimeout >/dev/null 2>&1; then
+        gtimeout "$secs" "$@"
+    else
+        local pid watchdog rc
+        "$@" & pid=$!
+        ( sleep "$secs"; kill "$pid" 2>/dev/null ) >/dev/null 2>&1 & watchdog=$!
+        wait "$pid" 2>/dev/null; rc=$?
+        kill "$watchdog" 2>/dev/null
+        return "$rc"
+    fi
+}
+
 # Strips proxy env vars before any gh/curl call, so a proxy configured for
 # other purposes on this machine can never silently break (or MITM) the
 # status line's outbound calls. Cheap defensive default even on machines
 # that don't currently run one.
+# Usage: probe_direct <seconds> <command> [args...]
 probe_direct() {
-    env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY -u https_proxy -u http_proxy -u all_proxy "$@"
+    local secs="$1"; shift
+    with_timeout "$secs" env -u HTTPS_PROXY -u HTTP_PROXY -u ALL_PROXY -u https_proxy -u http_proxy -u all_proxy "$@"
 }
 
 input=$(cat)
@@ -205,7 +236,7 @@ if [ -n "$remote_url" ]; then
         [ "$age" -lt 3600 ] && vis=$(cat "$vis_cache")
     fi
     if [ -z "$vis" ]; then
-        vis=$(probe_direct timeout 2 gh api "repos/${owner_repo}" --jq 'if .private then "private" else "public" end' 2>/dev/null)
+        vis=$(probe_direct 2 gh api "repos/${owner_repo}" --jq 'if .private then "private" else "public" end' 2>/dev/null)
         [ -n "$vis" ] && echo "$vis" > "$vis_cache" 2>/dev/null
     fi
 
