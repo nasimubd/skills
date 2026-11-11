@@ -151,3 +151,5 @@ See [SECURITY.md](./SECURITY.md) to report a vulnerability privately.
 ## License
 
 [MIT](./LICENSE)
+
+| [`typeless-migrate`](./plugins/typeless-migrate) | Safely archive Typeless history, recordings, settings, and dictionary-import data without copying account credentials. |

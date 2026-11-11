@@ -1,0 +1,113 @@
+{
+  "app_version": "2.10.0",
+  "bundle_version": "2.10.0.137",
+  "asar_sha256": "3711c687283cfcb634a116cd9104bef3ecb30ae902d25dc4b6cb73fcb9497346",
+  "artifact_count": 21,
+  "artifacts": [
+    {
+      "path": "package.json",
+      "size": 1373,
+      "sha256": "adcd3fa8ffc7bb43f90d2f7d69c582002b3039cef9a004e334795f8d3ebce8fc"
+    },
+    {
+      "path": "dist/main/index.js",
+      "size": 647101,
+      "sha256": "95eb2618e73cb225753a4197928b26168323c8f938cc555d63ddef1d5ab90b31"
+    },
+    {
+      "path": "dist/renderer/static/js/DOsqn1Op.js",
+      "size": 405735,
+      "sha256": "b74fa2939e780e61d5c0a64b281e255190efac8fbd8d6b6a14efe7af3ca0d246"
+    },
+    {
+      "path": "dist/renderer/static/js/DgIickWL.mjs",
+      "size": 7669549,
+      "sha256": "4fbcbef438b366874a904cecb2d44981a9adcc94a2bdc9ba84d428bdd76d4859"
+    },
+    {
+      "path": "dist/renderer/static/js/CoYl-_RP.js",
+      "size": 207165,
+      "sha256": "de1adcef23dab38bcdeabb168b7d3a6113aa8bdd7ba9088666757bc2ace22521"
+    },
+    {
+      "path": "dist/main/worker/chunkSessionWorker.js",
+      "size": 10744,
+      "sha256": "36104262ca0dbeedd0eccbcc2a72630a80d072e074d172bff81ed26d11b461ca"
+    },
+    {
+      "path": "dist/main/worker/opusWorker.js",
+      "size": 12316,
+      "sha256": "04bf680a5976123a84a638bd18d97a3f2d2de4dbd44e0fc337b8a7f99a03635b"
+    },
+    {
+      "path": "Resources/drizzle/0000_far_falcon.sql",
+      "size": 585,
+      "sha256": "e4d061e78f69bdedee1d6fd753e992ffe304ae6ab99f8392931d09d022b640f1"
+    },
+    {
+      "path": "Resources/drizzle/0001_yielding_medusa.sql",
+      "size": 44,
+      "sha256": "075302fb0026196d5af1ac886367637630b9a65b70a969bf7950b3b1b93b791f"
+    },
+    {
+      "path": "Resources/drizzle/0002_mean_santa_claus.sql",
+      "size": 191,
+      "sha256": "22767ff768ea0e2ba96cd56fb6e4ec25fff3348d4ffea18d3a80d2f66a59ef5b"
+    },
+    {
+      "path": "Resources/drizzle/0003_cuddly_selene.sql",
+      "size": 53,
+      "sha256": "20ea6448e98706e1b95695c1330c01ad4e16f885dc004075325aa25ac9776c33"
+    },
+    {
+      "path": "Resources/drizzle/0004_salty_emma_frost.sql",
+      "size": 45,
+      "sha256": "8a9208c7b879e3e3f50225b7a5af00b88f4237dcf8a3f1409f581b85e0a94d92"
+    },
+    {
+      "path": "Resources/drizzle/0005_cute_magdalene.sql",
+      "size": 48,
+      "sha256": "43fb1d8ad3bf474dbe2c401f753a5f5e09da75d509e22bdaa7d9bc9d77ec1b03"
+    },
+    {
+      "path": "Resources/drizzle/0006_glossy_robin_chapel.sql",
+      "size": 1595,
+      "sha256": "54495a83ff6d11324a325ffa7f99589b3a7647461bf8d91bdbf283cc8d711e1d"
+    },
+    {
+      "path": "Resources/drizzle/0007_first_monster_badoon.sql",
+      "size": 49,
+      "sha256": "a58458369e930248ad8c4158bb14d19430eb1e48760f787944e1a2de234206f2"
+    },
+    {
+      "path": "Resources/drizzle/0008_abandoned_franklin_storm.sql",
+      "size": 65,
+      "sha256": "ec9c3ed8f39fb25c95a0715701785443084c20a8076dc6416b3de07f33415172"
+    },
+    {
+      "path": "Resources/drizzle/0009_motionless_harpoon.sql",
+      "size": 43,
+      "sha256": "9e707252deab937ae9985df674257bd50eed0cf258544dd25fea613bde990f9c"
+    },
+    {
+      "path": "Resources/drizzle/0010_pink_the_fury.sql",
+      "size": 49,
+      "sha256": "73c927270236b1362a23bdc5c32ac7213f50e25763139bf39d11986442419bfb"
+    },
+    {
+      "path": "Resources/drizzle/0011_pretty_magik.sql",
+      "size": 865,
+      "sha256": "507729c720c31e9d7bab3527e6768e8d3f5a1bf5ea4b087293d84eb661d1adbd"
+    },
+    {
+      "path": "Resources/drizzle/0012_aspiring_madripoor.sql",
+      "size": 644,
+      "sha256": "15e6b983323d05e9ba2b2667603f2477bc0d5edd39eb20383feb8618df85b83b"
+    },
+    {
+      "path": "Resources/drizzle/0013_ask_anything_external_push_candidate.sql",
+      "size": 446,
+      "sha256": "fd7c62589559815c48a1b03d31f74aca3419cee8c4771e9d4c24765e84c2f135"
+    }
+  ]
+}
