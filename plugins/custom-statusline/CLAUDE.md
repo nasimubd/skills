@@ -77,6 +77,21 @@ exactly why this shipped once already: it was tested, and worked, under a
 normal shell's PATH. Reproduced by running the entrypoint under
 `env -i HOME="$HOME" PATH="/usr/bin:/bin" ...`, not by reasoning about it.
 
+This fix shipped once and was lost: the commit that rewrote `statusline.sh` for the
+Codex footer replaced the whole file and dropped the PATH block, and the test that
+guarded it kept passing because the release tag now comes from git, not `gh`. The
+regression test therefore asserts the **visibility badge** (the one segment that
+still needs `gh`), using a stub `gh` under a scratch `$HOME/.local/bin` so it needs
+no network, no real `gh` and no Homebrew path.
+
+## macOS has no `timeout`
+
+`probe_direct <seconds> <cmd>` runs through `with_timeout`, which uses `timeout`,
+then `gtimeout`, then a background watchdog. The first version called `timeout`
+directly; on macOS that is "command not found", so the visibility badge never
+appeared even from an interactive shell with `gh` on the PATH. Do not call
+`timeout` directly anywhere in this plugin.
+
 ## The release-segment test asserts a pattern, not a frozen tag
 
 `test-segment-release.sh`'s "real repo" case calls `segment_release` against
