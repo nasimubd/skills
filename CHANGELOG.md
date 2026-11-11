@@ -1,3 +1,53 @@
+# [1.6.0](https://github.com/nasimubd/skills/compare/v1.5.0...v1.6.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **custom-statusline:** build package test payloads portably ([0797881](https://github.com/nasimubd/skills/commit/079788108ac5678997dbd1ea85e21701f9531309))
+
+Two assertions passed a JSON payload written with escaped quotes and a comma inside braces to segment_package through a quoted command substitution. Under bash 3.2, the macOS /bin/bash, that mangles the quotes, so jq received invalid JSON and the segment returned nothing: the test failed on macOS and passed on bash 5. The segment itself was never wrong.
+
+Build the payloads with printf, which is the same on both.
+* **custom-statusline:** restore gh PATH and portable timeout ([4e337c0](https://github.com/nasimubd/skills/commit/4e337c0c476e287720d07e7a4d6730b1830fffa8))
+
+Claude Code starts the status line with a minimal PATH, so gh was not found and the public/private badge silently disappeared. A rewrite of statusline.sh for the Codex footer had dropped the PATH block that an earlier fix added, and the guarding test kept passing because the release tag now comes from git rather than gh.
+
+The visibility lookup also called `timeout`, which macOS does not ship, so the badge was missing even from an interactive shell. It now uses timeout, gtimeout or a background watchdog.
+
+The regression test now asserts the visibility badge with a stub gh under a scratch HOME, fails without the fix, and needs no network.
+* **repo:** run the regression suite under bash 3.2 ([6e6cf34](https://github.com/nasimubd/skills/commit/6e6cf342289d0e0fbe4083b0bd0c8698e9d59f91))
+
+The suite stopped on macOS with "bad substitution: no closing `)'" before running a single test. The test discovery was written inline inside a process substitution, `&lt; &lt;( ... )`, and bash 3.2 (the macOS /bin/bash) cannot parse a comment containing parentheses or an apostrophe there. The documented gate, `mise run test-marketplace-hook-regression-suite`, therefore could not be used on a stock Mac.
+
+Move the discovery into a function and read it with `< <(fn | sort)`. The commands and their order are unchanged, so the same files are found.
+
+
+### Features
+
+* **custom-statusline:** add segments for the target status line ([476da54](https://github.com/nasimubd/skills/commit/476da54fa46173f0cc0186835095555c57893398))
+
+Add the segments the status line is assembled from, each a small tested function over the stdin payload: git indicators (modified, deleted, staged, untracked, ahead, behind, stashes, conflicts), model id with effort and thinking, a context bar that marks the compaction trigger and estimates the room left, a UTC and local clock, the session transcript folder and id, the latest release with its age, and the working directory with repository URL and visibility.
+
+A shared runtime module hardens PATH, runs gh through a portable timeout (macOS has no `timeout`, which made the shell report exit 127), strips proxy variables, honours NO_COLOR and stays bash 3.2 compatible.
+
+The compaction trigger is an estimate, because Claude Code publishes no threshold: it is derived in one function and every figure that depends on it carries a `~`. The release test now stubs gh instead of calling the GitHub API.
+
+The entrypoint still uses the old script; the next commit switches it.
+* **custom-statusline:** assemble the status line from its segments ([cb1054b](https://github.com/nasimubd/skills/commit/cb1054bb9cc3f86028d15d64de0cb2ba73736f96))
+
+Replace the standalone entrypoint with one that sources the runtime and segment modules and prints one line per segment, in the order of the status line it is meant to match: git indicators and latest release, model with effort and thinking, a context bar that marks the compaction trigger, a UTC and local clock, directory with repository URL and visibility, and the session transcript folder and id.
+
+An earlier rewrite had left the segment modules and their tests passing while no longer being what ran, and the docs describing a design the entrypoint had dropped. The integration test now runs the real entrypoint under /bin/bash 3.2 with a minimal PATH and asserts every line, so that drift fails a test. Deployment and package lines stay available behind CUSTOM_STATUSLINE_EXTRAS, off by default. The branch is shown as the URL's /tree/&lt;branch> off main and master, a missing line is omitted instead of replaced by an error, and NO_COLOR is honoured.
+
+The README, segment reference, install skill and maintainer notes are rewritten to match, including the compaction readout being an estimate.
+* **teams-commander:** add enforced message style settings ([9eb1e0c](https://github.com/nasimubd/skills/commit/9eb1e0c2f89f091720d032606883ab0a4bbee559))
+
+Add `teams-commander style` with two per-user rules kept in a local style.json: `bold` (allow or never) and banned words with an optional replacement. verify refuses a message that breaks them (exit 3), open repeats the check so a rule added after verify still blocks the send, and storing a message prints a non-blocking warning.
+
+Banned terms match whole words in any case, so a short abbreviation does not flag longer words. An unreadable style.json fails closed with a clear message instead of silently switching the rules off. The file lives in the config directory and is never committed.
+
+The skills now tell the drafter to read `style show` first, and the setup skill documents how to set a rule.
+
 # [1.5.0](https://github.com/nasimubd/skills/compare/v1.4.0...v1.5.0) (2026-11-11)
 
 
