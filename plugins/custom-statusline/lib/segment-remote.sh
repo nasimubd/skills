@@ -4,6 +4,9 @@
 #
 #   ~/AegisLaw/skills | https://github.com/nasimubd/skills [public]
 #
+# On a branch other than main or master the GitHub URL points at that branch
+# (`/tree/<branch>`), which is how the branch name reaches the status line.
+#
 # Owner and name come from the payload (parsed from `origin` by Claude Code),
 # falling back to the origin URL. Visibility needs `gh` and is cached for an
 # hour; without it the badge is left out rather than replaced by an error.
@@ -61,8 +64,14 @@ segment_remote() {
     return 0
   fi
 
+  local url="https://${host}/${owner}/${repo}"
+  if [[ "$host" == "github.com" && -n "$dir" ]]; then
+    local branch
+    branch="$(git -C "$dir" symbolic-ref --short -q HEAD 2>/dev/null)" || branch=""
+    [[ -n "$branch" && "$branch" != "main" && "$branch" != "master" ]] && url+="/tree/$branch"
+  fi
   local out
-  out="$(sl_color green "$where") $(sl_color dim '|') $(sl_color dim "https://${host}/${owner}/${repo}")"
+  out="$(sl_color green "$where") $(sl_color dim '|') $(sl_color dim "$url")"
   if [[ "$host" == "github.com" ]]; then
     local vis
     vis="$(cache_fetch "${owner}/${repo}/visibility" "$CUSTOM_STATUSLINE_VISIBILITY_TTL_SECONDS" \
