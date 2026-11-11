@@ -1,3 +1,19 @@
+# [1.5.0](https://github.com/nasimubd/skills/compare/v1.4.0...v1.5.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **automation-scaffold:** check the role before editing the About ([e47321d](https://github.com/nasimubd/skills/commit/e47321deb065300452c10bf0562b68dacf26ad8f))
+
+GitHub lets only Maintain or Admin edit a repository's description and topics, and answers a write-only collaborator with a bare 404. publish about --yes now checks the role first and prints the exact gh repo edit command for the owner. A project.json without a github block (repos scaffolded before the About existed) used to report 'already up to date'; it is now refused with what to add. Found on jgondaaegis/AEGIS-Matter-Status.
+* **repo:** enforce plugin README synchronization ([c46674d](https://github.com/nasimubd/skills/commit/c46674d02219cffb6ffe43507f979e25a57b4a9a))
+* **repo:** validate plugin README table rows ([9826ea1](https://github.com/nasimubd/skills/commit/9826ea182b2c821840e3c04cdb02b642ddda8fdb))
+
+
+### Features
+
+* **typeless-migrate:** add safe archive workflow ([4044a53](https://github.com/nasimubd/skills/commit/4044a53c2fa9990ab5cf7912e1468f774e3c7143))
+
 # [1.4.0](https://github.com/nasimubd/skills/compare/v1.3.0...v1.4.0) (2026-10-29)
 
 
