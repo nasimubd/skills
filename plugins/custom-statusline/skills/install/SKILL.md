@@ -14,7 +14,7 @@ allowed-tools: Read, Bash
 
 Installs the `custom-statusline` plugin's multi-line status line into
 `~/.claude/settings.json`, backing up whatever `statusLine` configuration was
-there before, and points to which of its 8 segments render and why.
+there before, and points to which of its segments render and why.
 
 ## Execution
 
@@ -44,13 +44,13 @@ this plugin.
 
 ### 3. Customize which segments render
 
-Read `references/segments.md` for what each of the 8 segments shows and
+Read `references/segments.md` for what each segment shows and
 which `gh` scopes, if any, it needs. Segments degrade gracefully — a missing
 scope or unreachable network just omits that piece, never an error. To
-disable a segment for this user, comment out its `source` line in
+hide a line for this user, comment out its `emit` line in
 `scripts/statusline.sh` — a per-user preference edited directly, not a
-config flag (see `CLAUDE.md` for why cross-plugin config flags aren't used
-here).
+config flag. The network-backed deployment and package lines are off until
+`CUSTOM_STATUSLINE_EXTRAS` names them.
 
 ### 4. Uninstall
 
