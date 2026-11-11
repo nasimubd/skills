@@ -17,7 +17,11 @@
         "name": "nasimubd",
         "url": "https://github.com/nasimubd"
       },
-      "keywords": ["statusline", "git", "github"]
+      "keywords": [
+        "statusline",
+        "git",
+        "github"
+      ]
     },
     {
       "name": "norn-agent",
@@ -29,7 +33,13 @@
         "name": "nasimubd",
         "url": "https://github.com/nasimubd"
       },
-      "keywords": ["norn", "agent-runtime", "argus", "agent-s", "automation"]
+      "keywords": [
+        "norn",
+        "agent-runtime",
+        "argus",
+        "agent-s",
+        "automation"
+      ]
     },
     {
       "name": "teams-commander",
@@ -41,7 +51,15 @@
         "name": "nasimubd",
         "url": "https://github.com/nasimubd"
       },
-      "keywords": ["teams", "microsoft-teams", "messaging", "evidence", "provenance", "deep-link", "developer-productivity"]
+      "keywords": [
+        "teams",
+        "microsoft-teams",
+        "messaging",
+        "evidence",
+        "provenance",
+        "deep-link",
+        "developer-productivity"
+      ]
     },
     {
       "name": "automation-scaffold",
@@ -53,7 +71,34 @@
         "name": "nasimubd",
         "url": "https://github.com/nasimubd"
       },
-      "keywords": ["scaffold", "power-platform", "power-apps", "power-automate", "n8n", "make", "zapier", "semantic-release", "conventional-commits"]
+      "keywords": [
+        "scaffold",
+        "power-platform",
+        "power-apps",
+        "power-automate",
+        "n8n",
+        "make",
+        "zapier",
+        "semantic-release",
+        "conventional-commits"
+      ]
+    },
+    {
+      "name": "typeless-migrate",
+      "description": "Safely archive Typeless history, recordings, settings, and dictionary-import data without copying account credentials.",
+      "version": "1.4.0",
+      "source": "./plugins/typeless-migrate",
+      "category": "productivity",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": [
+        "typeless",
+        "migration",
+        "backup",
+        "dictionary"
+      ]
     }
   ]
 }

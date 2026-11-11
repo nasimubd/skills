@@ -147,3 +147,8 @@ SCRIPT_EOF
 Never shadow a Claude Code built-in slash command. And when a command name equals its
 plugin name, the full `/<plugin>:<command>` form is mandatory — typing `/<plugin>` alone
 is read as the plugin prefix, not the command.
+
+## typeless-migrate
+
+The plugin is archive-first. It excludes session stores, cookies, billing/team identity,
+sync cursors and learned personalization; its default command is a non-mutating dry run.
