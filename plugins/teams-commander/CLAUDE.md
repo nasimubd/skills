@@ -65,6 +65,23 @@ evidence, and the script alone can be skipped by building the URL by hand.
 - **`refuse_secrets` rejects some harmless text** that looks like `token=abcdef`.
   False positives are cheap (rephrase the excerpt); a stored credential is not.
 
+## Style settings are enforced by `verify`, not only written down
+
+`style.json` (`bold`, `banned`) lives in the config dir with the contacts, never in the
+repository: the rules are one person's and may name internal terms. `style_problems` is
+the single check. `verify` refuses on it (exit 3), `require_verified` repeats it so a rule
+added after `verify` still blocks `open`, and `message` prints it as a non-blocking
+`style:` warning. Absent file means defaults (bold allowed, nothing banned), and
+`style show` never creates it. Banned terms match **whole words, case-insensitively**, so
+`POC` does not flag "pocket"; a `style.json` that is not valid JSON **fails closed**: `verify` and `open` refuse with
+"style file ... is not valid JSON" and `health` fails, because silently falling back to the
+defaults would switch the user's rules off without telling them. Fix or delete the file;
+drafting and `message` itself are never blocked by it.
+
+The two rules come from what the user actually asked for (the history shows one "no
+bold" and one "do not use POC, name the application"), not from a guessed list. Add a
+rule type only when a real correction needs it.
+
 ## Tests
 
 `tests/test-teams.sh` (drafting CLI, `open`/`pbcopy` stubbed) and

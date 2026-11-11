@@ -23,6 +23,10 @@
 #   teams.sh contact add <alias> <email[,email...]> [--name N] [--topic T]
 #   teams.sh contact list
 #   teams.sh contact tenant <tenant-id>
+#   teams.sh style show
+#   teams.sh style bold allow|never
+#   teams.sh style ban <term> [--use <replacement>]
+#   teams.sh style unban <term>
 #   teams.sh health
 #
 # EXIT CODES
@@ -30,7 +34,7 @@
 #
 # ENVIRONMENT
 #   TEAMS_COMMANDER_STATE_DIR    drafts (default ~/.local/state/teams-commander)
-#   TEAMS_COMMANDER_CONFIG_DIR   contacts (default ~/.config/teams-commander)
+#   TEAMS_COMMANDER_CONFIG_DIR   contacts and style (default ~/.config/teams-commander)
 #   TEAMS_EVIDENCE_MAX_AGE_MIN   evidence older than this is stale (default 360)
 
 set -euo pipefail
@@ -39,6 +43,7 @@ readonly SELF="teams.sh"
 readonly STATE_DIR="${TEAMS_COMMANDER_STATE_DIR:-$HOME/.local/state/teams-commander}"
 readonly CONFIG_DIR="${TEAMS_COMMANDER_CONFIG_DIR:-$HOME/.config/teams-commander}"
 readonly CONTACTS="$CONFIG_DIR/contacts.json"
+readonly STYLE="$CONFIG_DIR/style.json"
 readonly MAX_AGE_MIN="${TEAMS_EVIDENCE_MAX_AGE_MIN:-360}"
 # msteams:// opens the desktop app directly, skipping the browser (Microsoft Learn,
 # "Configure deep links", protocol handlers). The message is NOT put in the link: tested
@@ -89,6 +94,40 @@ claims_with_status() {
       elif ((.source // "") == "" or (.excerpt // "") == "" or (.source_type // "") == "") then "unverified"
       elif ($now - (.captured_at | fromdateiso8601)) > ($max * 60) then "stale"
       else "verified" end)})' "$1"
+}
+
+# Style settings live in $STYLE (machine-specific, never committed). Absent means
+# the defaults: bold allowed, no banned terms. Reading never creates the file.
+style_valid() { [[ ! -f "$STYLE" ]] || jq -e 'type == "object"' "$STYLE" >/dev/null 2>&1; }
+
+style_json() {
+  style_valid || die "style file $STYLE is not valid JSON; fix or delete it (defaults apply without it)"
+  if [[ -f "$STYLE" ]]; then jq -c '{bold: (.bold // "allow"), banned: (.banned // {})}' "$STYLE"
+  else echo '{"bold":"allow","banned":{}}'; fi
+}
+
+# One line per style violation in a message file; no output means it complies.
+# Case-insensitive whole-word match for banned terms; bold means **text**.
+style_problems() {
+  local file="$1" cfg term use
+  [[ -s "$file" ]] || return 0
+  # Fail closed: a style file the user wrote but that cannot be read must not
+  # silently switch their rules off.
+  if ! style_valid; then
+    echo "style file $STYLE is not valid JSON; fix or delete it"
+    return 0
+  fi
+  cfg="$(style_json)"
+  if [[ "$(jq -r .bold <<<"$cfg")" == "never" ]] && grep -Eq '\*\*[^*]+\*\*' "$file"; then
+    echo "bold is off (style bold never): remove the ** markers"
+  fi
+  while IFS=$'\t' read -r term use; do
+    [[ -z "$term" ]] && continue
+    if grep -Fiwq -e "$term" "$file"; then
+      echo "banned term '$term'${use:+: use '$use' instead}"
+    fi
+  done < <(jq -r '.banned | to_entries[] | [.key, .value] | @tsv' <<<"$cfg")
+  return 0
 }
 
 cmd_new() {
@@ -162,6 +201,7 @@ cmd_message() {
   [[ -s "$dir/message.txt" ]] || die "message is empty"
   jq_update "$ledger" '.verified = null'
   echo "message stored ($(wc -c <"$dir/message.txt" | tr -d ' ') bytes)"
+  style_problems "$dir/message.txt" | sed 's/^/  style: /' >&2
 }
 
 cmd_show() {
@@ -204,14 +244,20 @@ cmd_verify() {
     echo "  ✗ $cid $status: $text"
     problems=$((problems + 1))
   done < <(jq -r '.[] | select(.status == "unverified" or .status == "stale") | [.id, .status, .text] | @tsv' <<<"$claims")
+  local sp
+  while IFS= read -r sp; do
+    [[ -z "$sp" ]] && continue
+    echo "  ✗ style: $sp"
+    problems=$((problems + 1))
+  done < <(style_problems "$dir/message.txt")
   if [[ "$problems" -gt 0 ]]; then
     jq_update "$ledger" '.verified = null'
-    echo "REFUSED: $problems problem(s). Add evidence, refresh stale evidence, or drop/rephrase the claim."
+    echo "REFUSED: $problems problem(s). Add evidence, refresh stale evidence, drop/rephrase the claim, or fix the style."
     exit 3
   fi
   jq_update "$ledger" --arg sha "$(sha_of "$dir/message.txt")" --arg at "$(now_iso)" \
     '.verified = {message_sha256: $sha, at: $at}'
-  echo "VERIFIED: every fact has current evidence."
+  echo "VERIFIED: every fact has current evidence and the message follows the style settings."
 }
 
 # The gate `link` and `open` share: the stored verification must match the
@@ -226,6 +272,9 @@ require_verified() {
   [[ "$want" == "$(sha_of "$dir/message.txt")" ]] || die "message changed after verify; run verify again" 3
   if claims_with_status "$ledger" | jq -e 'any(.[]; .status == "unverified" or .status == "stale")' >/dev/null; then
     die "evidence went stale since verify; refresh it and verify again" 3
+  fi
+  if [[ -n "$(style_problems "$dir/message.txt")" ]]; then
+    die "message breaks the style settings since verify (run: $SELF verify <draft-id>)" 3
   fi
 }
 
@@ -315,6 +364,41 @@ cmd_contact() {
   esac
 }
 
+cmd_style() {
+  local sub="${1:-}"; shift || true
+  case "$sub" in
+    show)
+      echo "Style settings ($( [[ -f "$STYLE" ]] && echo "$STYLE" || echo "defaults; no $STYLE yet" ))"
+      style_json | jq -r '"  bold: \(.bold)", (if (.banned | length) == 0 then "  banned terms: none" else "  banned terms:", (.banned | to_entries[] | "    \(.key)\(if .value != "" then " -> use \(.value)" else "" end)") end)'
+      ;;
+    bold)
+      [[ "${1:-}" =~ ^(allow|never)$ ]] || usage "$SELF style bold allow|never"
+      mkdir -p "$CONFIG_DIR"; [[ -f "$STYLE" ]] || echo '{}' >"$STYLE"
+      jq_update "$STYLE" --arg v "$1" '.bold = $v'
+      echo "bold: $1"
+      ;;
+    ban)
+      local term="${1:-}" use=""
+      [[ -n "$term" ]] || usage "$SELF style ban <term> [--use <replacement>]"
+      shift
+      if [[ "${1:-}" == "--use" ]]; then use="${2:-}"; shift 2 || usage "--use needs a replacement"; fi
+      [[ $# -eq 0 ]] || usage "unknown option '$1'"
+      [[ "$term" != *$'\n'* && "$term" != *$'\t'* && "$use" != *$'\n'* && "$use" != *$'\t'* ]] || usage "term and replacement must be single-line text"
+      mkdir -p "$CONFIG_DIR"; [[ -f "$STYLE" ]] || echo '{}' >"$STYLE"
+      jq_update "$STYLE" --arg t "$term" --arg u "$use" '.banned = ((.banned // {}) + {($t): $u})'
+      echo "banned: $term${use:+ (use '$use')}"
+      ;;
+    unban)
+      [[ -n "${1:-}" ]] || usage "$SELF style unban <term>"
+      [[ -f "$STYLE" ]] || die "no style file at $STYLE; nothing to remove"
+      jq -e --arg t "$1" '(.banned // {}) | has($t)' "$STYLE" >/dev/null || die "'$1' is not a banned term"
+      jq_update "$STYLE" --arg t "$1" '.banned |= del(.[$t])'
+      echo "unbanned: $1"
+      ;;
+    *) usage "$SELF style show|bold|ban|unban" ;;
+  esac
+}
+
 cmd_health() {
   local fails=0 checked=0
   check() {
@@ -330,6 +414,7 @@ cmd_health() {
   check "state dir writable ($STATE_DIR)" "mkdir -p '$STATE_DIR' && test -w '$STATE_DIR'" "check permissions"
   check "contacts file present ($CONTACTS)" "test -f '$CONTACTS'" "run the setup skill"
   check "contacts file is valid JSON with contacts" "jq -e '.contacts | length > 0' '$CONTACTS'" "add a contact"
+  check "style file valid JSON, if present ($STYLE)" "test ! -f '$STYLE' || jq -e 'type == \"object\"' '$STYLE'" "fix or delete it; defaults apply without it"
   echo "Checked: $checked · failed: $fails"
   [[ "$fails" -eq 0 ]]
 }
@@ -348,8 +433,9 @@ main() {
     link) cmd_link "$@" ;;
     open) cmd_open "$@" ;;
     contact) cmd_contact "$@" ;;
+    style) cmd_style "$@" ;;
     health) cmd_health ;;
-    *) usage "$SELF new|claim|refresh|drop|message|show|verify|link|open|contact|health (see header)" ;;
+    *) usage "$SELF new|claim|refresh|drop|message|show|verify|link|open|contact|style|health (see header)" ;;
   esac
 }
 

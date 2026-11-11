@@ -3,6 +3,10 @@
 Rules the user has set for messages drafted on their behalf, with where each came
 from. Add to this file when the user corrects a draft; keep the date and the reason.
 
+Personal rules that must hold every time (bold off, banned words) are not kept here: they
+are set with `teams-commander style` and enforced by `verify`. This file is the general
+convention.
+
 | Rule | Why / provenance |
 |---|---|
 | It is a **Teams chat message, never an email**: no subject line, no "Re:", no sign-off block, no long sections | User, 2026-10-23: "Whenever you are writing a message, it is for Teams, not for emailing." |
