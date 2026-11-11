@@ -51,7 +51,7 @@ hooks, and UI metadata belong in adapters, not duplicate skill bodies.
 
 ## Documentation changes
 
-Every plugin change must review its user-facing README. The README synchronization gate is mandatory: it checks that every registered plugin has a heading and exact marketplace description in `plugins/<name>/README.md`, that the root `README.md` links each plugin, and that every plugin directory is registered. If the plugin’s behavior, interface, limits, or examples changed, update the relevant README in the same commit.
+Every plugin change must review its user-facing README. The README synchronization gate is mandatory: it checks that every registered plugin has a heading and exact marketplace description in `plugins/<name>/README.md`, that the root `README.md` contains a current Plugin table row (name, description, and category) and links each plugin, and that every plugin directory is registered. If the plugin’s behavior, interface, limits, or examples changed, update the relevant README in the same commit.
 
 
 Root-level and hub `CLAUDE.md` files are updated **in the same commit** as

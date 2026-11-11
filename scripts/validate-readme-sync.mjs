@@ -15,6 +15,9 @@ if (!existsSync(marketplacePath) || !existsSync(rootReadmePath)) {
 }
 const marketplace = readJson(marketplacePath);
 const rootReadme = readFileSync(rootReadmePath, 'utf8');
+const pluginsHeading = rootReadme.indexOf('## Plugins');
+const pluginsSectionEnd = pluginsHeading >= 0 ? rootReadme.indexOf('\n\nThe repository also includes', pluginsHeading + 10) : -1;
+const pluginTable = pluginsHeading >= 0 ? rootReadme.slice(pluginsHeading, pluginsSectionEnd >= 0 ? pluginsSectionEnd : undefined) : '';
 const entries = Array.isArray(marketplace.plugins) ? marketplace.plugins : [];
 const pluginDirs = new Set((await readdir(join(ROOT, 'plugins'), { withFileTypes: true }))
   .filter((entry) => entry.isDirectory() && existsSync(join(ROOT, 'plugins', entry.name, 'plugin.json'))).map((entry) => entry.name));
@@ -34,6 +37,8 @@ for (const entry of entries) {
     errors.push(`${relative(ROOT, pluginReadmePath)} must include the marketplace description`);
   const rootLink = new RegExp(`\\./plugins/${dir.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}(?:\\)|/|\\b)`);
   if (!rootLink.test(rootReadme)) errors.push(`README.md must link ./plugins/${dir}`);
+  const tableRow = `| [\`${entry.name}\`](./plugins/${dir}) | ${entry.description} | \`${entry.category}\` |`;
+  if (!pluginTable.includes(tableRow)) errors.push(`README.md plugin table is missing or stale for ${entry.name}`);
 }
 for (const dir of pluginDirs) {
   if (!entries.some((entry) => entry.source === `./plugins/${dir}`))
