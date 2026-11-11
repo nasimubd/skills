@@ -19,7 +19,7 @@ Teams. Unchecked claims block the send.
 | Command | What it does |
 |---|---|
 | `/teams-commander:message` | One command for the message: **draft** it (evidence shown for every fact), **reply** to a chat (read-only), or **send** it (opens the chat in the Teams app with the message on your clipboard; you paste once and press Enter) |
-| `/teams-commander:setup` | Adds contacts (alias → work email) to a local file that is never committed |
+| `/teams-commander:setup` | Adds contacts (alias → work email) and optional style rules (bold off, banned words) to local files that are never committed |
 | `/teams-commander:health` | Checks the dependencies and local configuration |
 
 ## How sending works
@@ -55,4 +55,5 @@ read chats through the claude.ai Microsoft 365 connector when it is connected.
 | Path | Contents |
 |---|---|
 | `~/.config/teams-commander/contacts.json` | Contacts and optional tenant id |
+| `~/.config/teams-commander/style.json` | Optional style rules: `bold` (`allow` or `never`) and banned words with a preferred replacement |
 | `~/.local/state/teams-commander/drafts/<id>/` | Each draft's message and evidence ledger |

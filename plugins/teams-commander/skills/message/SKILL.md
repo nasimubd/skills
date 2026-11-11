@@ -84,6 +84,10 @@ Follow [references/style.md](../../references/style.md): one-line greeting, a fe
 bullets, the ask; no subject line, no "Re:", no sign-off, no `>` quote bar. Detail goes
 in a document the user attaches; name the file and its path.
 
+Run `teams-commander style show` first: the user's own rules (bold off, banned words
+with their replacements) are enforced by `verify`, so write to them rather than finding
+out at step 5. Storing the message prints a `style:` warning for any rule it breaks.
+
 ```bash
 teams-commander message "$ID" - <<'EOF'
 Hi Jona, ...
@@ -136,6 +140,7 @@ Enter; never claim a message was sent.
 | Issue | Cause | Solution |
 |---|---|---|
 | `verify` exits 3 "unverified" | A fact has no source or excerpt | Gather the evidence, or drop/rephrase the claim |
+| `verify` exits 3 with `style:` lines | The message breaks a rule in `style show` | Rewrite the message; change a rule only if the user says so |
 | `verify` exits 3 "stale" | Evidence older than `TEAMS_EVIDENCE_MAX_AGE_MIN` (6 h) | Re-check at the source, then `refresh` with the new excerpt |
 | `claim` exits 2 "credential" | The excerpt looks like a token or password | Quote the fact around it; never store credentials |
 | Two copies after pasting | An old draft was in the compose box | ⌘A, then ⌘V |
@@ -154,7 +159,9 @@ After this skill completes, check before closing:
    file, and record Teams link behaviour in `references/deep-link.md` with the date.
 3. **Was a workaround needed?** If you improvised, record it so the next invocation
    doesn't need the same improvisation.
-4. **Did the user correct the style or a fact?** Record the style rule in
-   `references/style.md`; a fact correction means the evidence step missed something.
+4. **Did the user correct the style or a fact?** For a style rule the user states as
+   standing (no bold, a word never to use), set it with `teams-commander style` so it is
+   enforced; record the general convention in `references/style.md`. A fact correction
+   means the evidence step missed something.
 
 Only update if the issue is real and reproducible — not speculative.

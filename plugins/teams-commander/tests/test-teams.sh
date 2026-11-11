@@ -112,5 +112,54 @@ assert_eq "group link lists both users and the topic" "1" \
   "$(grep -c 'tenantId=00000000-1111-2222-3333-444444444444&users=a%40example.com,b%40example.com&topicName=Ops%20review$' <<<"$link")"
 assert_eq "bad email is refused" "2" "$(status_of bash "$TEAMS" contact add x not-an-email)"
 
+# Style settings: absent file means defaults, and reading never creates the file.
+assert_eq "style show works with no style file" "0" "$(status_of bash "$TEAMS" style show)"
+assert_eq "style show does not create the file" "no" "$([[ -f "$TEAMS_COMMANDER_CONFIG_DIR/style.json" ]] && echo yes || echo no)"
+assert_eq "default allows bold" "0" "$(status_of bash "$TEAMS" verify d1)"
+
+bash "$TEAMS" new s1 >/dev/null
+bash "$TEAMS" claim s1 --text "Is the letter ready?" --kind question >/dev/null
+printf 'Hi Jona, the **engagement letter** POC is ready.\nOK to close?\n' | bash "$TEAMS" message s1 - >/dev/null 2>&1
+
+bash "$TEAMS" style bold never >/dev/null
+assert_eq "bold never refuses ** markers" "3" "$(status_of bash "$TEAMS" verify s1)"
+assert_eq "bad bold value is a usage error" "2" "$(status_of bash "$TEAMS" style bold loud)"
+
+printf 'Hi Jona, the engagement letter POC is ready.\n' | bash "$TEAMS" message s1 - >/dev/null 2>&1
+assert_eq "plain text passes bold never" "0" "$(status_of bash "$TEAMS" verify s1)"
+
+bash "$TEAMS" style ban POC --use "engagement letter" >/dev/null
+assert_eq "banned term refuses the message, any case" "3" "$(status_of bash "$TEAMS" verify s1)"
+assert_eq "refusal names the term and the replacement" "1" \
+  "$(bash "$TEAMS" verify s1 | grep -c "banned term 'POC': use 'engagement letter' instead" || true)"
+assert_eq "storing a message warns about style on stderr" "1" \
+  "$(printf 'the POC is up\n' | bash "$TEAMS" message s1 - 2>&1 >/dev/null | grep -c 'style: banned term' || true)"
+
+printf 'Hi Jona, the pocket guide is ready.\n' | bash "$TEAMS" message s1 - >/dev/null 2>&1
+assert_eq "a banned term only matches whole words" "0" "$(status_of bash "$TEAMS" verify s1)"
+
+printf 'the POC is up\n' | bash "$TEAMS" message s1 - >/dev/null 2>&1
+bash "$TEAMS" style unban POC >/dev/null
+assert_eq "unban lifts the restriction" "0" "$(status_of bash "$TEAMS" verify s1)"
+assert_eq "unban of an unknown term fails" "1" "$(status_of bash "$TEAMS" style unban nothing)"
+
+# The gate holds on send: a style change after verify makes open refuse.
+bash "$TEAMS" verify s1 >/dev/null
+bash "$TEAMS" style ban "the POC" >/dev/null
+assert_eq "a style rule added after verify blocks open" "3" "$(status_of bash "$TEAMS" open s1 jona --dry-run)"
+assert_eq "verify refuses the multi-word banned term" "3" "$(status_of bash "$TEAMS" verify s1)"
+bash "$TEAMS" style unban "the POC" >/dev/null
+bash "$TEAMS" verify s1 >/dev/null
+assert_eq "open passes again once the message complies" "0" "$(status_of bash "$TEAMS" open s1 jona --dry-run)"
+
+assert_eq "health accepts a valid style file" "0" "$(bash "$TEAMS" health 2>&1 | grep -c '✗ style file' || true)"
+echo '{not json' >"$TEAMS_COMMANDER_CONFIG_DIR/style.json"
+assert_eq "health flags a broken style file" "1" "$(bash "$TEAMS" health 2>&1 | grep -c '✗ style file' || true)"
+assert_eq "a broken style file fails closed on verify" "3" "$(status_of bash "$TEAMS" verify s1)"
+assert_eq "verify says why, without jq noise" "1" "$(bash "$TEAMS" verify s1 2>&1 | grep -c 'not valid JSON; fix or delete it')"
+assert_eq "storing a message is not blocked by a broken style file" "0" "$(printf 'hi\n' | bash "$TEAMS" message s1 - >/dev/null 2>&1; echo $?)"
+rm -f "$TEAMS_COMMANDER_CONFIG_DIR/style.json"
+assert_eq "deleting the broken file restores the defaults" "0" "$(status_of bash "$TEAMS" verify s1)"
+
 echo "test-teams.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]
