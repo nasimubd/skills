@@ -86,6 +86,7 @@ done < <({
     find "$REPO_ROOT/plugins" -mindepth 3 -maxdepth 4 -type f \
          -name 'test-*.sh' -path '*/tests/*' 2>/dev/null
     find "$REPO_ROOT/.mise/tasks/tests" -maxdepth 1 -name 'test-*.sh' -type f 2>/dev/null
+    find "$REPO_ROOT/scripts/tests" -maxdepth 1 -name 'test-*.sh' -type f 2>/dev/null
 } | sort)
 
 # ANTI-FALSE-GREEN PROPERTY 2 — EMPTY DISCOVERY IS FAILURE.

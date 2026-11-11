@@ -1,5 +1,7 @@
 # custom-statusline
 
+Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals.
+
 A cross-platform custom status line: Claude Code renders the reference template from its JSON payload, while Codex uses its native TUI footer
 and a handful of GitHub-derived repository signals, paired with a
 platform-neutral Agent Skill and native Codex footer adapter.
