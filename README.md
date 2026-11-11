@@ -28,19 +28,11 @@ is stale.
 
 | Plugin | What it does | Category |
 |---|---|---|
-| [`automation-scaffold`](./plugins/automation-scaffold) | Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release. | devops |
-| [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — with a native Codex footer adapter. | productivity |
-| [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing tasks across deterministic tools, decision models, Argus, Agent-S, and human approval. | productivity |
-| [`teams-commander`](./plugins/teams-commander) | Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open the chat in the Teams app with the message on your clipboard. | productivity |
-
-Platform-neutral skills for Claude Code and Codex live in [`skills/`](./skills), each
-registered for Codex under `.agents/skills/`:
-
-| Skill | What it does |
-|---|---|
-| [`custom-statusline`](./skills/custom-statusline) | Configure the custom status line for Claude Code or Codex. |
-| [`logo-design-agency`](./skills/logo-design-agency) | Agency logo and identity work with provenance, confidentiality and trademark controls. |
-| [`open-source-stack-catalog`](./skills/open-source-stack-catalog) | Provenance-pinned records for reviewing and adopting open-source projects. |
+| [`automation-scaffold`](./plugins/automation-scaffold) | Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release. | `devops` |
+| [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals. | `productivity` |
+| [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing natural-language tasks across tools, models, desktop automation, and approval gates. | `productivity` |
+| [`teams-commander`](./plugins/teams-commander) | Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open the chat in the Teams app with the message on your clipboard. | `productivity` |
+| [`typeless-migrate`](./plugins/typeless-migrate) | Safely archive Typeless history, recordings, settings, and dictionary-import data without copying account credentials. | `productivity` |
 
 The repository also includes a Codex-compatible package under
 [`codex-plugins/norn-agent`](./codex-plugins/norn-agent). Both integrations use
@@ -90,7 +82,7 @@ Each gate prints how many things it examined rather than a bare pass — "0 disc
 
 ## For plugin developers
 
-Plugin READMEs are maintained as part of the plugin change. The README synchronization gate fails when a registered plugin lacks its own README, its marketplace description, or a root marketplace link, and when an unregistered plugin directory exists. Run it after every plugin addition, fix, or removal.
+Plugin READMEs are maintained as part of the plugin change. The README synchronization gate fails when a registered plugin lacks its own README, its marketplace description, its row in this Plugin table, or a root marketplace link, and when an unregistered plugin directory exists. Run it after every plugin addition, fix, or removal.
 
 See [plugins/CLAUDE.md](./plugins/CLAUDE.md) for the full contract. The traps worth
 knowing before you write anything:
