@@ -1,5 +1,7 @@
 # teams-commander
 
+Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open the chat in the Teams app with the message on your clipboard.
+
 Draft Microsoft Teams messages for a named person, with **evidence for every fact**,
 then open them in Teams for you to send.
 

@@ -1,5 +1,7 @@
 # automation-scaffold
 
+Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release.
+
 Scaffold a repository for a Power Platform, n8n, Make.com or Zapier automation, starting from
 what is running in production, and take it to its first release under one convention.
 

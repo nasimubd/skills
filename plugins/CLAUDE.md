@@ -29,6 +29,7 @@ node scripts/validate-plugins.mjs
 - [ ] `node scripts/validate-plugins.mjs` passes
 - [ ] `node scripts/check-version-equality.mjs` passes
 - [ ] `node scripts/validate-skill-body.mjs` passes
+- [ ] `node scripts/validate-readme-sync.mjs` passes
 - [ ] `mise run test-marketplace-hook-regression-suite` passes
 
 ## All plugins

@@ -90,6 +90,8 @@ Each gate prints how many things it examined rather than a bare pass — "0 disc
 
 ## For plugin developers
 
+Plugin READMEs are maintained as part of the plugin change. The README synchronization gate fails when a registered plugin lacks its own README, its marketplace description, or a root marketplace link, and when an unregistered plugin directory exists. Run it after every plugin addition, fix, or removal.
+
 See [plugins/CLAUDE.md](./plugins/CLAUDE.md) for the full contract. The traps worth
 knowing before you write anything:
 

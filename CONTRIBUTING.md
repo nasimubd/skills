@@ -22,6 +22,7 @@ something already in progress or already decided against.
    node scripts/check-version-equality.mjs  # the version lockstep actually holds
    node scripts/validate-skill-body.mjs     # SKILL.md structural contract
    node scripts/validate-agent-skills.mjs   # portable Agent Skills contract
+   node scripts/validate-readme-sync.mjs    # plugin README and root index synchronization
    mise run test-marketplace-hook-regression-suite
    ```
 
@@ -49,6 +50,9 @@ hooks, and UI metadata belong in adapters, not duplicate skill bodies.
    [.claude/rules/git.md](./.claude/rules/git.md).
 
 ## Documentation changes
+
+Every plugin change must review its user-facing README. The README synchronization gate is mandatory: it checks that every registered plugin has a heading and exact marketplace description in `plugins/<name>/README.md`, that the root `README.md` links each plugin, and that every plugin directory is registered. If the plugin’s behavior, interface, limits, or examples changed, update the relevant README in the same commit.
+
 
 Root-level and hub `CLAUDE.md` files are updated **in the same commit** as
 the change they describe — a stale doc is treated as a defect, not a
