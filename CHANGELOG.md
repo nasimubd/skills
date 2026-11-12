@@ -1,3 +1,32 @@
+# [1.7.0](https://github.com/nasimubd/skills/compare/v1.6.0...v1.7.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **repo:** make the git protocol test ignore an inherited identity ([e69ce7c](https://github.com/nasimubd/skills/commit/e69ce7cff0ea657115a87e9fb3103e4540f5dea1))
+
+Git's identity variables take precedence over every config file. The release pipeline exports its bot identity, so inside a release the new identity tests could not see the state they set up: git committed without a configured identity, and a commit meant to carry a machine-derived identity carried the bot's. The test passed standalone and failed in the release preflight.
+
+The test now clears GIT_AUTHOR_* and GIT_COMMITTER_* at the top. It passes in a plain environment and with the pipeline's variables exported.
+* **repo:** refuse to guess or publish a machine-derived identity ([c7e7b2a](https://github.com/nasimubd/skills/commit/c7e7b2aba3c69e7fb8afbd291df8079e708cc77f))
+
+With no user.name and user.email configured, git invents an identity from the operating-system account: its full name and an address at the host name or IP. In a public repository that publishes both, and removing them later means rewriting history and moving released tags. Nothing in the git protocol checked who a commit was attributed to, and the failure is silent.
+
+hooks:install now sets user.useConfigOnly so git refuses instead of guessing, and fills a missing identity from the signed-in gh account (login and its no-reply address), leaving any configured identity alone. scripts/commit-identity.cjs rejects an email at an IP address, a bare host name or a private network name, and an empty name; the commit-msg hook runs it before reading the message and pr:check runs it for every author and committer on the branch.
+
+The rule is written in .claude/rules/git.md with an ADR. The tests cover accepted and rejected identities, the hook, pr:check in a throwaway clone, and git refusing to commit without an identity.
+
+
+### Features
+
+* **change-guardrails:** add deny-or-ask guardrails for shell commands ([0e75e3a](https://github.com/nasimubd/skills/commit/0e75e3af4abcdced983b6127fc424efd5769d0c5))
+
+A PreToolUse hook on Bash judges each command against a plain-text rules file and answers deny or ask; no match leaves the normal permission flow alone. The shipped rules cover force-pushes and deletes of protected branches, recursive deletes of system paths, disk wipes, destructive SQL, piping a download or decoded string into a shell, uploads, package publishing and infrastructure or cloud deletes.
+
+Quoted text and heredoc bodies are removed before matching, so a commit message that mentions a destructive command does not trigger a rule, while sh -c and eval payloads still do. A GUARD-OK marker with a written reason turns a deny into an ask, never an allow. The hook fails open on its own errors; a broken rules file makes every command ask and names the line. The audit log records decisions and rule ids, never command text.
+
+Adds the check and health skills, a bin command, the rules reference, and the registrations (marketplace entry, README table, plugin list).
+
 # [1.6.0](https://github.com/nasimubd/skills/compare/v1.5.0...v1.6.0) (2026-11-11)
 
 
