@@ -1,0 +1,17 @@
+{
+  "description": "change-guardrails: judge every Bash command against the policy rules and answer deny or ask. Escape: GUARD-OK: <reason> turns a deny into an ask. Fail-open on the hook's own errors; a broken rules file makes every command ask.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-bash.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
