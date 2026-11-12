@@ -121,6 +121,27 @@
         "audit-log",
         "developer-productivity"
       ]
+    },
+    {
+      "name": "click-path-guides",
+      "description": "Write step-by-step UI click-path guides that are checked against the application's own definition: every bold control must exist in the source, menu paths follow one format, and position or colour wording is rejected.",
+      "version": "1.7.0",
+      "source": "./plugins/click-path-guides",
+      "category": "documentation",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": [
+        "documentation",
+        "how-to",
+        "click-path",
+        "ui-guide",
+        "accessibility",
+        "low-code",
+        "lint",
+        "developer-productivity"
+      ]
     }
   ]
 }

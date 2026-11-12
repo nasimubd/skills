@@ -1,0 +1,8 @@
+{
+  "name": "click-path-guides",
+  "description": "Write step-by-step UI click-path guides that are checked against the application's own definition: every bold control must exist in the source, menu paths follow one format, and position or colour wording is rejected.",
+  "author": {
+    "name": "nasimubd",
+    "url": "https://github.com/nasimubd"
+  }
+}
