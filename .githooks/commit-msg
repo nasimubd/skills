@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
-# Reject commit messages that are not Conventional Commits or that carry AI attribution
+# Reject commits whose identity is machine-derived (scripts/commit-identity.cjs) and commit
+# messages that are not Conventional Commits or that carry AI attribution
 # (.claude/rules/git.md). Installed by `mise run hooks:install` (core.hooksPath .githooks).
 ROOT="$(git rev-parse --show-toplevel)"
 CL="$ROOT/node_modules/.bin/commitlint"
@@ -7,4 +8,7 @@ if [ ! -x "$CL" ]; then
   echo "commit-msg: commitlint is not installed; run: mise run hooks:install" >&2
   exit 1
 fi
+# Identity first: a commit that would publish an employer name or a private address is
+# refused before its message is even read.
+node "$ROOT/scripts/commit-identity.cjs" || exit 1
 exec "$CL" --edit "$1"
