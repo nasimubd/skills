@@ -142,6 +142,28 @@
         "lint",
         "developer-productivity"
       ]
+    },
+    {
+      "name": "investigation-tools",
+      "description": "Read-only triage briefs and blameless incident notes whose claims carry evidence: scans fetched content for planted instructions, keeps secrets out of what is saved, and takes verifiable snapshots before any change.",
+      "version": "1.7.0",
+      "source": "./plugins/investigation-tools",
+      "category": "devops",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": [
+        "triage",
+        "incident",
+        "root-cause",
+        "rca",
+        "evidence",
+        "snapshot",
+        "read-only",
+        "prompt-injection",
+        "developer-productivity"
+      ]
     }
   ]
 }

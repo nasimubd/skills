@@ -41,6 +41,7 @@ alphabetical and in step with `.claude-plugin/marketplace.json`.
 - [change-guardrails](./change-guardrails/CLAUDE.md): deterministic guardrails for shell commands, deny or ask with an audit log (enforcement)
 - [click-path-guides](./click-path-guides/CLAUDE.md): UI click-path guides linted against the app's own definition (documentation)
 - [custom-statusline](./custom-statusline/CLAUDE.md): Claude Code status line and Codex footer (productivity)
+- [investigation-tools](./investigation-tools/CLAUDE.md): read-only triage briefs and blameless incident notes with evidence, scans and snapshots (devops)
 - [norn-agent](./norn-agent/CLAUDE.md): install and operate the Norn runtime (productivity)
 - [teams-commander](./teams-commander/CLAUDE.md): evidence-gated Teams messages, opened in the Teams app (productivity)
 
