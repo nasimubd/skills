@@ -9,6 +9,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+
+# Hermetic: git's identity variables beat every config file, so an inherited value (the
+# release pipeline exports its bot identity) would hide what the identity tests set up.
+unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_AUTHOR_DATE GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL GIT_COMMITTER_DATE
+
 CL="$ROOT/node_modules/.bin/commitlint"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
