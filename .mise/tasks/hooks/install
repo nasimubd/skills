@@ -6,3 +6,26 @@ cd "$ROOT"
 bun install --frozen-lockfile
 git config core.hooksPath .githooks
 echo "✓ commitlint installed; commit-msg hook active (core.hooksPath=$(git config core.hooksPath))"
+
+# Never let git guess an identity from the operating-system account: it publishes the
+# account's full name and an address at the machine's host name or IP (commit-identity.cjs).
+git config user.useConfigOnly true
+echo "✓ user.useConfigOnly=true: git refuses to commit without an explicit identity"
+
+# Fill a missing identity from the signed-in GitHub account (login and its no-reply address).
+# An identity that is already configured, here or globally, is left alone.
+if [[ -z "$(git config user.name || true)" || -z "$(git config user.email || true)" ]]; then
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    login="$(gh api user --jq .login)"
+    uid="$(gh api user --jq .id)"
+    [[ -n "$(git config user.name || true)" ]] || git config user.name "$login"
+    [[ -n "$(git config user.email || true)" ]] || git config user.email "$uid+$login@users.noreply.github.com"
+    echo "✓ commit identity set for this clone: $(git config user.name) <$(git config user.email)>"
+  else
+    echo "! no commit identity yet and gh is not signed in. Set one before committing:"
+    echo "    git config user.name <your name or GitHub login>"
+    echo "    git config user.email <id>+<login>@users.noreply.github.com"
+  fi
+else
+  echo "✓ commit identity: $(git config user.name) <$(git config user.email)>"
+fi

@@ -21,6 +21,10 @@ if [[ -z "$(git -C "$ROOT" log --format=%h origin/main..HEAD)" ]]; then
   echo "✗ no commits on this branch since origin/main"; fails=$((fails + 1))
 fi
 
+# Every author and committer on the branch: none may be machine-derived (an IP address or a
+# private host name in the email), which is what git invents when no identity is configured.
+if (cd "$ROOT" && node scripts/commit-identity.cjs --range origin/main..HEAD); then :; else fails=$((fails + 1)); fi
+
 # The PR title is a commit header too; the body carries no AI attribution.
 if [[ -n "${1:-}" ]]; then
   if printf '%s\n' "$1" | (cd "$ROOT" && "$CL" --verbose); then :; else fails=$((fails + 1)); fi

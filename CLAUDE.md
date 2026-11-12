@@ -138,6 +138,8 @@ a plugin, skill or repo scope), branches named `<type>/<slug>`, `mise run pr:che
 opening and before merging, **rebase and merge**, and no AI attribution anywhere. The
 commit-msg hook (`mise run hooks:install`, once per clone) and `pr:check` enforce it; the
 decision is [docs/adr/2026-10-28-git-protocol.md](./docs/adr/2026-10-28-git-protocol.md).
+Commits also need an identity set on purpose, never one git guessed from the machine
+([docs/adr/2026-11-12-commit-identity.md](./docs/adr/2026-11-12-commit-identity.md)).
 
 ### Messages and other outward-facing text
 
