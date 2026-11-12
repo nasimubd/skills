@@ -38,6 +38,7 @@ Each plugin's own CLAUDE.md is the source of truth for its invariants. Keep this
 alphabetical and in step with `.claude-plugin/marketplace.json`.
 
 - [automation-scaffold](./automation-scaffold/CLAUDE.md): scaffold, release and verify automation repositories from production (devops)
+- [change-guardrails](./change-guardrails/CLAUDE.md): deterministic guardrails for shell commands, deny or ask with an audit log (enforcement)
 - [custom-statusline](./custom-statusline/CLAUDE.md): Claude Code status line and Codex footer (productivity)
 - [norn-agent](./norn-agent/CLAUDE.md): install and operate the Norn runtime (productivity)
 - [teams-commander](./teams-commander/CLAUDE.md): evidence-gated Teams messages, opened in the Teams app (productivity)
