@@ -1,3 +1,25 @@
+# [1.8.0](https://github.com/nasimubd/skills/compare/v1.7.0...v1.8.0) (2026-11-12)
+
+
+### Features
+
+* **click-path-guides:** lint UI guides against the app definition ([a64a1bf](https://github.com/nasimubd/skills/commit/a64a1bf6910ce38365564b67bf45183a871efdcf))
+
+A guide that names a control which does not exist is worse than no guide. The plugin extracts the labels from the application's own definition (JSON, YAML including Power Fx style, or text, optionally restricted to named keys) and lints a guide against them: every bold term must be a label in the source, menu paths read **File** > **Open**, controls are never identified by position, colour, shape or size, and the guide needs a Prerequisites section, consecutive numbered steps and no placeholders or filler.
+
+A screenshot, a PDF, an empty definition or a source with no labels is an error, never a pass. The unfilled template fails the lint on purpose. Terms the definition cannot hold need an explicit --allow and a note in the guide that they were not verified.
+
+Adds the guide and lint skills, the bin command, the style reference and the registrations (marketplace entry, README table, plugin list).
+* **investigation-tools:** add triage-brief and incident-rca ([12e83fc](https://github.com/nasimubd/skills/commit/12e83fc8e434dc7f1b7f89ca588ebd0757c66b4c))
+
+triage-brief reads a ticket or request with read-only means, screens the fetched text for planted instructions and secrets, writes a brief whose every fact carries a source tag, and stops for approval. incident-rca snapshots what it will change, applies only an approved minimal fix, never declares the incident closed itself, and writes a blameless root-cause note with one prevention step.
+
+The investigation-tools command backs both: scan and redact find and remove secret-like strings (reporting line and kind, never the value), untrusted flags instruction-like text, brief and rca lint the documents (evidence, plan state, blame wording, prevention count, a rollback snapshot that still verifies), and snapshot create, verify, list and restore make checksummed, owner-only copies and never overwrite.
+
+Live trials found two defects, both fixed: a raw secret stayed in the scratch folder, and the incident skill asked for approval twice.
+
+Adds the references, the templates, the registrations (marketplace entry, README table, plugin list) and 122 tests.
+
 # [1.7.0](https://github.com/nasimubd/skills/compare/v1.6.0...v1.7.0) (2026-11-12)
 
 
