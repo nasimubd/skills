@@ -490,7 +490,6 @@ cmd_task() {
       [[ -n "$F_TITLE" ]] || usage "task add --title T [--in notes|reminders] [--due D] --confirm"
       local home
       home="$(task_home)"
-      if [[ "$F_REMEMBER" == 1 ]]; then pref_set "$home"; echo "Remembered: tasks go to $home."; fi
       if [[ "$home" == reminders ]]; then
         gate "add reminder '$F_TITLE'${F_LIST:+ to list '$F_LIST'}${F_DUE:+ due $F_DUE}"
         add_reminder "$F_TITLE" "$F_LIST" "$F_DUE"
@@ -507,7 +506,10 @@ cmd_task() {
         else
           die "$n notes are titled '$note'; name one with --note and --folder"
         fi
-      fi ;;
+      fi
+      # Saved only after the user confirmed and the task was added: a preview or a refusal
+      # must not change configuration.
+      if [[ "$F_REMEMBER" == 1 ]]; then pref_set "$home"; echo "Remembered: tasks go to $home."; fi ;;
     list)
       local home="${F_IN:-both}"
       if [[ "$home" == both || "$home" == notes ]]; then

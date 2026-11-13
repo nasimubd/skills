@@ -334,5 +334,16 @@ printf 'Notes\t3\nWork\t2\n' >"$WORK/replies/1"; printf '%sp1\tNotes\tA\n' "$ID"
 assert_contains "with --create-folders the preview says so" "creating missing folders" \
   "$(bash "$NOTES" organize "$WORK/plan3.json" --create-folders 2>&1 || true)"
 
+# ---- review fix: --remember is saved only after the confirmed write ----------
+reset
+rm -f "$NOTES_COMMANDER_CONFIG_DIR/prefs.json"
+assert_eq "a preview with --remember is refused" "3" \
+  "$(status_of bash "$NOTES" task add --title Maybe --in reminders --remember)"
+assert_eq "a refused task did not change the preference" "task-home: ask" "$(bash "$NOTES" pref show)"
+echo "x-apple-reminder://r9" >"$WORK/reply"
+bash "$NOTES" task add --title Sure --in reminders --remember --confirm >/dev/null
+assert_eq "a confirmed task saves the preference" "task-home: reminders" "$(bash "$NOTES" pref show)"
+bash "$NOTES" pref set task-home ask >/dev/null
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]
