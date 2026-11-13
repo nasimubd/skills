@@ -385,5 +385,22 @@ reset
 echo "OK" >"$WORK/reply"
 assert_eq "append to a plain note succeeds" "0" "$(status_of bash "$NOTES" append --id "${ID}p1" --text hi --confirm)"
 
+# ---- review fix: a retried undo finishes the job instead of repeating it -----
+reset
+mkdir -p "$NOTES_COMMANDER_STATE_DIR/journal"
+J="$NOTES_COMMANDER_STATE_DIR/journal/20261113T010101Z-9.tsv"
+printf '%sp1\t%sp1\tNotes\tWork\n%sp2\t%sp2\tNotes\tWork\n' "$ID" "$ID" "$ID" "$ID" >"$J"
+# newest line first: folders, move p2 (lands), folders, move p1 (does not land)
+printf 'Notes\t3\n' >"$WORK/replies/1"; printf 'Work\t%sp2\tNotes\n' "$ID" >"$WORK/replies/2"
+printf 'Notes\t3\n' >"$WORK/replies/3"; printf 'Work\t%sp1\tWork\n' "$ID" >"$WORK/replies/4"
+assert_eq "a partly failed undo exits 1" "1" "$(status_of bash "$NOTES" undo --confirm)"
+assert_eq "only the failed move stays in the journal" "1" "$(grep -c . "$J")"
+assert_contains "the survivor is the note that did not move" "p1" "$(cat "$J")"
+rm -f "$WORK/calls" "$WORK/replies"/*
+printf 'Notes\t3\n' >"$WORK/replies/1"; printf 'Work\t%sp1\tNotes\n' "$ID" >"$WORK/replies/2"
+assert_eq "the retry restores the rest" "0" "$(status_of bash "$NOTES" undo --confirm)"
+assert_eq "the retry made only the two calls it needed" "2" "$(calls)"
+assert_contains "the batch is then marked undone" "already undone" "$(bash "$NOTES" journal)"
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]

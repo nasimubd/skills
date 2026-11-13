@@ -762,11 +762,21 @@ cmd_undo() {
   while IFS=$'\t' read -r _ nid from to; do printf '  %s  [%s] -> [%s]\n' "${nid##*/}" "$to" "$from"; done <"$file"
   gate "undo batch $batch ($(grep -c . "$file") move(s))"
   acquire_lock
-  while IFS=$'\t' read -r _ nid from to; do
-    if folder_exists "$from" && move_one "$nid" "$from" >/dev/null; then ok=$((ok + 1)); else bad=$((bad + 1)); echo "$SELF: could not put $nid back into '$from'" >&2; fi
+  # Moving a note can change its id, so lines that were already restored must not be tried
+  # again on a retry: keep only the failures in the journal.
+  local line pending="$file.pending"
+  : >"$pending"
+  while IFS= read -r line; do
+    IFS=$'\t' read -r _ nid from to <<<"$line"
+    if folder_exists "$from" && move_one "$nid" "$from" >/dev/null; then
+      ok=$((ok + 1))
+    else
+      bad=$((bad + 1)); printf '%s\n' "$line" >>"$pending"
+      echo "$SELF: could not put $nid back into '$from'" >&2
+    fi
   done < <(sort -r "$file")
   audit "undo batch $batch: $ok restored, $bad failed"
-  if [[ "$bad" == 0 ]]; then mv "$file" "${file%.tsv}.undone"; fi
+  if [[ "$bad" == 0 ]]; then mv "$file" "${file%.tsv}.undone"; rm -f "$pending"; else mv "$pending" "$file"; fi
   echo "Undo of $batch: $ok restored, $bad failed."
   [[ "$bad" == 0 ]]
 }
