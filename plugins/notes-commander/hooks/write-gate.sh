@@ -21,9 +21,37 @@ cmd="$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null)" || exit 0
 
 # In scope: osascript / JXA aimed at Notes or Reminders...
 grep -Eq '(^|[;&|[:space:]({`])(/usr/bin/)?osascript([[:space:]]|$)' <<<"$cmd" || exit 0
-grep -Eiq 'application[[:space:]]*(\(|id)?[[:space:]]*\\?["'"'"']?(Notes|Reminders)\b|tell[[:space:]]+app[^[:cntrl:]]*(Notes|Reminders)' <<<"$cmd" || exit 0
-# ...that changes something. Reading and showing stay allowed.
-grep -Eiq '\b(delete|make[[:space:]]+new|set[[:space:]]+(the[[:space:]]+)?(body|name|completed|due[[:space:]]+date|remind[[:space:]]+me[[:space:]]+date|priority|flagged)|move[[:space:]]|duplicate|empty[[:space:]]+trash)\b' <<<"$cmd" || exit 0
+
+# A script named on the command line (osascript /tmp/x.scpt) is invisible in the command
+# text, so read it too. Compiled scripts go through osadecompile when it is available.
+body="$cmd"
+set -f
+read -ra words <<<"$cmd"
+set +f
+for w in "${words[@]}"; do
+  w="${w//[\"\']/}"
+  [[ -f "$w" && "$w" =~ \.(scpt|applescript|js|jxa)$ ]] || continue
+  if [[ "$w" == *.scpt ]]; then
+    body+=$'\n'"$(osadecompile "$w" 2>/dev/null || true)"
+  else
+    body+=$'\n'"$(head -c 200000 "$w" 2>/dev/null || true)"
+  fi
+done
+
+grep -Eiq 'application[[:space:]]*(\(|id)?[[:space:]]*\\?["'"'"']?(Notes|Reminders)\b|tell[[:space:]]+app[^[:cntrl:]]*(Notes|Reminders)' <<<"$body" || exit 0
+
+# ...that changes something. Reading and showing stay allowed. Three shapes:
+#   verbs that create or remove (delete, make, create, move, duplicate, save, import, empty trash)
+#   AppleScript property assignment: "set <anything> of <thing>", which covers body, name, text,
+#     container, password, due date and the rest, not a hand-picked list
+#   JXA: ".prop = value" assignment and ".delete(" / ".make(" style calls
+mutates=0
+grep -Eiq '\b(delete|make|create|move|duplicate|save|import)\b|\bempty[[:space:]]+trash\b' <<<"$body" && mutates=1
+# "set n to count of notes" is a variable, not a property: drop matches that contain " to ".
+if grep -Eio '\bset[[:space:]]+(the[[:space:]]+)?([A-Za-z]+[[:space:]]+){0,3}of[[:space:]]' <<<"$body" \
+   | grep -Eviq '[[:space:]]to[[:space:]]'; then mutates=1; fi
+grep -Eq '\.[A-Za-z_]+[[:space:]]*=[^=]' <<<"$body" && mutates=1
+[[ "$mutates" == 1 ]] || exit 0
 
 if grep -Eq 'NOTES-WRITE-OK:[[:space:]]*[^<[:space:]][^[:cntrl:]]{9,}' <<<"$cmd"; then
   exit 0
