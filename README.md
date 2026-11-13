@@ -34,6 +34,7 @@ is stale.
 | [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals. | `productivity` |
 | [`investigation-tools`](./plugins/investigation-tools) | Read-only triage briefs and blameless incident notes whose claims carry evidence: scans fetched content for planted instructions, keeps secrets out of what is saved, and takes verifiable snapshots before any change. | `devops` |
 | [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing natural-language tasks across tools, models, desktop automation, and approval gates. | `productivity` |
+| [`notes-commander`](./plugins/notes-commander) | Find, open, create and append to Apple Notes and manage tasks in Notes or Reminders. Reads are free, every write needs your confirmation, and it asks where tasks should live. | `productivity` |
 | [`teams-commander`](./plugins/teams-commander) | Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open the chat in the Teams app with the message on your clipboard. | `productivity` |
 | [`typeless-migrate`](./plugins/typeless-migrate) | Safely archive Typeless history, recordings, settings, and dictionary-import data without copying account credentials. | `productivity` |
 

@@ -164,6 +164,25 @@
         "prompt-injection",
         "developer-productivity"
       ]
+    },
+    {
+      "name": "notes-commander",
+      "description": "Find, open, create and append to Apple Notes and manage tasks in Notes or Reminders. Reads are free, every write needs your confirmation, and it asks where tasks should live.",
+      "version": "1.8.0",
+      "source": "./plugins/notes-commander",
+      "category": "productivity",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": [
+        "apple-notes",
+        "reminders",
+        "tasks",
+        "macos",
+        "osascript",
+        "developer-productivity"
+      ]
     }
   ]
 }
