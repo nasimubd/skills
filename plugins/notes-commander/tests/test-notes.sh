@@ -321,5 +321,18 @@ reset
 printf 'Personal\nWork\n' >"$WORK/reply"
 assert_eq "reminders lists prints one name per line" "Personal|Work" "$(bash "$NOTES" reminders lists | paste -sd'|' -)"
 
+# ---- review fix: the preview only promises folders when --create-folders is set
+reset
+cat >"$WORK/plan3.json" <<JSON
+[{"id":"${ID}p1","to":"Work"}]
+JSON
+printf 'Notes\t3\nWork\t2\n' >"$WORK/replies/1"; printf '%sp1\tNotes\tA\n' "$ID" >"$WORK/replies/2"
+out="$(bash "$NOTES" organize "$WORK/plan3.json" 2>&1 || true)"
+if [[ "$out" == *"creating missing folders"* ]]; then FAIL=$((FAIL + 1)); echo "  ✗ the preview promised folder creation without --create-folders"; else PASS=$((PASS + 1)); fi
+reset
+printf 'Notes\t3\nWork\t2\n' >"$WORK/replies/1"; printf '%sp1\tNotes\tA\n' "$ID" >"$WORK/replies/2"
+assert_contains "with --create-folders the preview says so" "creating missing folders" \
+  "$(bash "$NOTES" organize "$WORK/plan3.json" --create-folders 2>&1 || true)"
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]

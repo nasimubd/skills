@@ -699,7 +699,7 @@ cmd_organize() {
     from="$(printf '%s\n' "$have" | awk -F'\t' -v id="${ids[$i]}" '$1 == id {print $2}')"
     printf '  %s  [%s] -> [%s]  %s\n' "${ids[$i]##*/}" "$from" "${tos[$i]}" "$(redact_title "$(printf '%s\n' "$have" | awk -F'\t' -v id="${ids[$i]}" '$1 == id {print $3}')")"
   done
-  gate "apply $count move(s) listed above${F_CREATE_FOLDERS:+, creating missing folders}"
+  gate "apply $count move(s) listed above$([[ "$F_CREATE_FOLDERS" == 1 ]] && echo ', creating missing folders')"
   acquire_lock
   local batch line done_n=0 skipped=0 failed=0
   batch="$(new_batch)"
