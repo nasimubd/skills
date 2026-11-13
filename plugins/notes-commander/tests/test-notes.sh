@@ -345,5 +345,20 @@ bash "$NOTES" task add --title Sure --in reminders --remember --confirm >/dev/nu
 assert_eq "a confirmed task saves the preference" "task-home: reminders" "$(bash "$NOTES" pref show)"
 bash "$NOTES" pref set task-home ask >/dev/null
 
+# ---- review fix: error and preview paths redact credential-looking titles ----
+reset
+printf '%sp1\tNotes\t%s\n%sp2\tHome\t%s\n' "$ID" "$FAKE_TOKEN" "$ID" "$FAKE_TOKEN" >"$WORK/reply"
+out="$(bash "$NOTES" show "$FAKE_TOKEN" 2>&1 || true)"
+if [[ "$out" == *"$FAKE_TOKEN"* ]]; then FAIL=$((FAIL + 1)); echo "  ✗ an ambiguous-title error printed a credential-looking title"; else PASS=$((PASS + 1)); fi
+assert_contains "the ambiguity error still helps" "pick one with --id" "$out"
+reset
+: >"$WORK/reply"
+out="$(bash "$NOTES" open "$FAKE_TOKEN" 2>&1 || true)"
+if [[ "$out" == *"$FAKE_TOKEN"* ]]; then FAIL=$((FAIL + 1)); echo "  ✗ a not-found error echoed a credential-looking title"; else PASS=$((PASS + 1)); fi
+reset
+printf '%sp1\tNotes\t%s\n' "$ID" "$FAKE_TOKEN" >"$WORK/reply"
+out="$(bash "$NOTES" append "$FAKE_TOKEN" --text hi 2>&1 || true)"
+if [[ "$out" == *"$FAKE_TOKEN"* ]]; then FAIL=$((FAIL + 1)); echo "  ✗ the append preview printed a credential-looking title"; else PASS=$((PASS + 1)); fi
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]

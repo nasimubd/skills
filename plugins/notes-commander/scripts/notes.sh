@@ -273,13 +273,13 @@ resolve_note() {
   n="$(printf '%s' "$hits" | grep -c . || true)"
   if [[ "$n" == 1 ]]; then NOTE_ID="$(cut -f1 <<<"$hits")"; return 0; fi
   if [[ "$n" -gt 1 ]]; then
-    echo "$SELF: $n notes are titled '$title'; pick one with --id:" >&2
-    printf '%s\n' "$hits" >&2
+    echo "$SELF: $n notes are titled '$(redact_title "$title")'; pick one with --id:" >&2
+    printf '%s\n' "$hits" | redact_lines >&2
     exit 1
   fi
-  echo "$SELF: no note titled '$title' (examined: every note outside $TRASH)." >&2
+  echo "$SELF: no note titled '$(redact_title "$title")' (examined: every note outside $TRASH)." >&2
   echo "Notes with similar titles:" >&2
-  notes_search "$title" name | sed 's/^/  /' >&2 || true
+  notes_search "$title" name | redact_lines | sed 's/^/  /' >&2 || true
   echo "Folders:" >&2
   notes_folders | sed 's/^/  /' >&2 || true
   exit 1
@@ -385,7 +385,7 @@ cmd_append() {
   parse_flags "$@"
   [[ -n "$F_TEXT" ]] || usage "append (<title>|--id ID) --text X|- --confirm"
   resolve_note "${POS[*]:-}"
-  gate "append ${#F_TEXT} characters to note $NOTE_ID${POS[0]:+ ('${POS[*]}')}"
+  gate "append ${#F_TEXT} characters to note $NOTE_ID${POS[0]:+ ('$(redact_title "${POS[*]}")')}"
   as 'on run argv
   tell application "Notes"
     set n to note id (item 1 of argv)
