@@ -371,5 +371,19 @@ assert_eq "a real leap day is accepted" "3" \
   "$(status_of bash "$NOTES" task add --title X --in reminders --due 2028-02-29)"
 assert_eq "a bad date never reached osascript" "0" "$(calls)"
 
+# ---- review fix: append refuses notes it could damage ------------------------
+reset
+echo "ATTACHMENTS:2" >"$WORK/reply"
+assert_eq "append refuses a note with attachments" "1" "$(status_of bash "$NOTES" append --id "${ID}p1" --text hi --confirm)"
+assert_contains "the refusal explains why" "2 attachment(s)" "$(bash "$NOTES" append --id "${ID}p1" --text hi --confirm 2>&1 || true)"
+if [[ -f "$NOTES_COMMANDER_STATE_DIR/audit.log" ]] && grep -q 'appended' "$NOTES_COMMANDER_STATE_DIR/audit.log"; then
+  FAIL=$((FAIL + 1)); echo "  ✗ a refused append was audited as done"; else PASS=$((PASS + 1)); fi
+reset
+echo "LOCKED" >"$WORK/reply"
+assert_eq "append refuses a locked note" "1" "$(status_of bash "$NOTES" append --id "${ID}p1" --text hi --confirm)"
+reset
+echo "OK" >"$WORK/reply"
+assert_eq "append to a plain note succeeds" "0" "$(status_of bash "$NOTES" append --id "${ID}p1" --text hi --confirm)"
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]

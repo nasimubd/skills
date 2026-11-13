@@ -386,12 +386,23 @@ cmd_append() {
   [[ -n "$F_TEXT" ]] || usage "append (<title>|--id ID) --text X|- --confirm"
   resolve_note "${POS[*]:-}"
   gate "append ${#F_TEXT} characters to note $NOTE_ID${POS[0]:+ ('$(redact_title "${POS[*]}")')}"
-  as 'on run argv
+  # Appending rewrites the note's whole HTML body, which Notes may not round-trip for
+  # attachments, drawings or tables, and there is no undo. So refuse those notes.
+  local res
+  res="$(as 'on run argv
   tell application "Notes"
     set n to note id (item 1 of argv)
+    if password protected of n then return "LOCKED"
+    set k to count of attachments of n
+    if k > 0 then return "ATTACHMENTS:" & k
     set body of n to (body of n) & (item 2 of argv)
+    return "OK"
   end tell
-end run' "$NOTE_ID" "$(printf '%s\n' "$F_TEXT" | to_html)" >/dev/null || die "could not append"
+end run' "$NOTE_ID" "$(printf '%s\n' "$F_TEXT" | to_html)")" || die "could not append"
+  case "$res" in
+    LOCKED) die "this note is locked; unlock it in the Notes app first" 1 ;;
+    ATTACHMENTS:*) die "this note has ${res#ATTACHMENTS:} attachment(s); appending rewrites its body and could damage them, so nothing was changed. Add the line in Notes yourself, or put it in a new note." 1 ;;
+  esac
   audit "appended to note $NOTE_ID"
   echo "Appended to note $NOTE_ID."
 }
