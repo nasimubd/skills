@@ -516,6 +516,9 @@ task_home() {
   esac
 }
 
+# The checklist note for task add and task list: same lookup in both, narrowed by --folder.
+task_note_hits() { notes_search "$1" exact | awk -F'\t' -v f="$F_FOLDER" 'NF && (f == "" || $2 == f)'; }
+
 cmd_task() {
   local sub="${1:-}"; shift || true
   parse_flags "$@"
@@ -531,7 +534,7 @@ cmd_task() {
       else
         local note="${F_NOTE:-Tasks}" hits n
         gate "add '$BOX $F_TITLE' to the note '$note' (created if it does not exist)"
-        hits="$(notes_search "$note" exact)" || die "could not read Notes"
+        hits="$(task_note_hits "$note")" || die "could not read Notes"
         n="$(printf '%s' "$hits" | grep -c . || true)"
         if [[ "$n" == 0 ]]; then
           create_note "$note" "$F_FOLDER" "$BOX $F_TITLE"
@@ -547,10 +550,14 @@ cmd_task() {
       if [[ "$F_REMEMBER" == 1 ]]; then pref_set "$home"; echo "Remembered: tasks go to $home."; fi ;;
     list)
       local home="${F_IN:-both}"
+      case "$home" in both|notes|reminders) ;; *) usage "--in must be notes, reminders or both" ;; esac
       if [[ "$home" == both || "$home" == notes ]]; then
         echo "== Notes checklist lines ($BOX) =="
-        local note="${F_NOTE:-Tasks}" id
-        id="$(notes_search "$note" exact | head -1 | cut -f1)" || id=""
+        local note="${F_NOTE:-Tasks}" id hits n
+        hits="$(task_note_hits "$note")" || die "could not read Notes"
+        n="$(printf '%s' "$hits" | grep -c . || true)"
+        [[ "$n" -le 1 ]] || die "$n notes are titled '$note'; name one with --folder"
+        id="$(printf '%s' "$hits" | cut -f1)"
         if [[ -n "$id" ]]; then
           as 'on run argv
   tell application "Notes" to return plaintext of note id (item 1 of argv)

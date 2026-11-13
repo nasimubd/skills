@@ -418,5 +418,18 @@ reset
 printf '%sp1\tNotes\t%s\n' "$ID" "$FAKE_TOKEN" >"$WORK/reply"
 assert_contains "a four-class token is still redacted" "redacted" "$(bash "$NOTES" list)"
 
+# ---- review fix: task list and task add agree about which note is the list ----
+reset
+printf '%sp1\tWork\tTasks\n%sp2\tHome\tTasks\n' "$ID" "$ID" >"$WORK/reply"
+assert_eq "task list refuses two notes with the same title" "1" "$(status_of bash "$NOTES" task list --in notes)"
+assert_contains "and says how to choose" "--folder" "$(bash "$NOTES" task list --in notes 2>&1 || true)"
+reset
+assert_eq "a bad --in is a usage error, not silence" "2" "$(status_of bash "$NOTES" task list --in bogus)"
+reset
+printf '%sp1\tWork\tTasks\n%sp2\tHome\tTasks\n' "$ID" "$ID" >"$WORK/replies/1"
+printf 'OK' >"$WORK/replies/2"
+bash "$NOTES" task add --title 'Pay rent' --in notes --folder Home --confirm >/dev/null
+assert_contains "--folder picks the note in that folder" "${ID}p2" "$(cat "$WORK/last.args")"
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]
