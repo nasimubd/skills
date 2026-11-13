@@ -402,5 +402,21 @@ assert_eq "the retry restores the rest" "0" "$(status_of bash "$NOTES" undo --co
 assert_eq "the retry made only the two calls it needed" "2" "$(calls)"
 assert_contains "the batch is then marked undone" "already undone" "$(bash "$NOTES" journal)"
 
+# ---- review fix: the scanner leaves ordinary prose alone ---------------------
+reset
+for plain in "password is required" "token: refreshed" "secret - something" "Project2024Plan" "Password-protected PDFs"; do
+  printf '%sp1\tNotes\t%s\n' "$ID" "$plain" >"$WORK/reply"
+  assert_contains "ordinary title '$plain' is not redacted" "$plain" "$(bash "$NOTES" list)"
+done
+reset
+for hit in "password: ${PW}" "token = ab12cd34ef" "my secret is 9f8e7d6c5b"; do
+  printf '%sp1\tNotes\tx\n' "$ID" >"$WORK/replies/1"; printf '%s' "$hit" >"$WORK/replies/2"
+  assert_eq "'${hit%%[:=]*}...' still refuses show" "3" "$(status_of bash "$NOTES" show x)"
+  rm -f "$WORK/calls"
+done
+reset
+printf '%sp1\tNotes\t%s\n' "$ID" "$FAKE_TOKEN" >"$WORK/reply"
+assert_contains "a four-class token is still redacted" "redacted" "$(bash "$NOTES" list)"
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]

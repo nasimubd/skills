@@ -149,6 +149,22 @@ pref_set() {
 # text looks like a credential, and never prints the value itself, only the rule it hit.
 RS=$'\x1e'; US=$'\x1f'
 
+# "password: x9!kq2", "token = ...", "secret is ...": a keyword, a separator, then a value
+# that has a digit or a symbol in it. "password is required" and "token: refreshed" are prose.
+credential_assignment() {
+  local line val
+  local re='(password|passwd|pwd|passcode|secret|api[ _-]?key|token)[[:space:]]*(is[[:space:]]+|[:=-][[:space:]]*)([^[:space:]]{6,})'
+  shopt -s nocasematch
+  while IFS= read -r line; do
+    if [[ "$line" =~ $re ]]; then
+      val="${BASH_REMATCH[3]}"
+      if [[ "$val" =~ [0-9] || "$val" =~ [^A-Za-z] ]]; then shopt -u nocasematch; return 0; fi
+    fi
+  done
+  shopt -u nocasematch
+  return 1
+}
+
 # Text on stdin -> the name of the first rule it matches, or nothing.
 secret_rule() {
   local t
@@ -161,16 +177,18 @@ secret_rule() {
   elif grep -Eq -- 'AIza[0-9A-Za-z_-]{35}' <<<"$t"; then echo google-api-key
   elif grep -Eq -- 'sk-[A-Za-z0-9_-]{20,}' <<<"$t"; then echo api-key
   elif grep -Eq -- 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}' <<<"$t"; then echo jwt
-  elif grep -Eiq -- '(password|passwd|pwd|passcode|secret|api[ _-]?key|token)[[:space:]]*(is|:|=|-)[[:space:]]*[^[:space:]]{6,}' <<<"$t"; then echo credential-assignment
+  elif credential_assignment <<<"$t"; then echo credential-assignment
   else
-    # One token, 10-64 chars, at least three of lower/upper/digit/symbol, not an email or URL.
+    # One token, 10-64 chars, not an email or URL, with all four of lower/upper/digit/symbol,
+    # or three of them when it is long (16+). Shorter three-class words such as
+    # "Project2024Plan" are ordinary titles.
     local one="${t//[[:space:]]/}" classes=0
     if [[ "$one" == "$t" && ${#one} -ge 10 && ${#one} -le 64 && "$one" != *@*.* && "$one" != *://* ]]; then
       [[ "$one" =~ [a-z] ]] && classes=$((classes + 1))
       [[ "$one" =~ [A-Z] ]] && classes=$((classes + 1))
       [[ "$one" =~ [0-9] ]] && classes=$((classes + 1))
       [[ "$one" =~ [^A-Za-z0-9] ]] && classes=$((classes + 1))
-      [[ "$classes" -ge 3 ]] && echo single-token-secret
+      if [[ "$classes" -ge 4 || ( "$classes" -ge 3 && ${#one} -ge 16 ) ]]; then echo single-token-secret; fi
     fi
   fi
   return 0
