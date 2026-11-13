@@ -1,0 +1,17 @@
+{
+  "description": "notes-commander write gate: deny hand-written osascript that changes Notes or Reminders so every write goes through the confirmed, audited notes-commander command. Escape: NOTES-WRITE-OK: <reason>. Fail-open.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/write-gate.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

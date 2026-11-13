@@ -43,6 +43,7 @@ alphabetical and in step with `.claude-plugin/marketplace.json`.
 - [custom-statusline](./custom-statusline/CLAUDE.md): Claude Code status line and Codex footer (productivity)
 - [investigation-tools](./investigation-tools/CLAUDE.md): read-only triage briefs and blameless incident notes with evidence, scans and snapshots (devops)
 - [norn-agent](./norn-agent/CLAUDE.md): install and operate the Norn runtime (productivity)
+- [notes-commander](./notes-commander/CLAUDE.md): find and open Apple Notes, manage tasks in Notes or Reminders, every write confirmed (productivity)
 - [teams-commander](./teams-commander/CLAUDE.md): evidence-gated Teams messages, opened in the Teams app (productivity)
 
 ## Structure
