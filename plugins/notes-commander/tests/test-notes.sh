@@ -316,5 +316,10 @@ start=$SECONDS
 assert_eq "a hung call times out" "1" "$(NOTES_COMMANDER_TIMEOUT=1 status_of bash "$NOTES" folders)"
 if (( SECONDS - start < 4 )); then PASS=$((PASS + 1)); else FAIL=$((FAIL + 1)); echo "  ✗ the timeout did not fire in time"; fi
 
+# ---- review fix: Reminders list names stay separate lines ------------------
+reset
+printf 'Personal\nWork\n' >"$WORK/reply"
+assert_eq "reminders lists prints one name per line" "Personal|Work" "$(bash "$NOTES" reminders lists | paste -sd'|' -)"
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]

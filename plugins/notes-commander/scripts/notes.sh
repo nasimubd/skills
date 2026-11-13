@@ -251,7 +251,16 @@ end tell' | awk -F'\t' -v t="$TRASH" 'NF && $1 != t'
 }
 
 reminder_lists() {
-  as 'tell application "Reminders" to return (name of every list) as string' | tr ',' '\n' | sed 's/^ *//'
+  as '
+tell application "Reminders"
+  set ls to every list
+  set out to ""
+  repeat with i from 1 to count of ls
+    set l to item i of ls
+    set out to out & (name of l) & linefeed
+  end repeat
+  return out
+end tell' | awk 'NF'
 }
 
 # Resolve a title (or --id) to one note id, or explain what exists and stop.
