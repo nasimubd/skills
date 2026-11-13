@@ -428,6 +428,11 @@ end run' "$1" "$2" | awk 'NF'
 parse_due() {
   local re='^([0-9]{4})-([0-9]{2})-([0-9]{2})( ([0-9]{2}):([0-9]{2}))?$'
   [[ "$1" =~ $re ]] || usage "--due must be YYYY-MM-DD or 'YYYY-MM-DD HH:MM'"
+  # The shape is not enough: 2026-02-30 and 25:99 would roll over silently. Round-trip the
+  # value through date(1) and refuse anything that does not come back identical.
+  local day="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}-${BASH_REMATCH[3]}" hm="${BASH_REMATCH[5]:-09}:${BASH_REMATCH[6]:-00}" back
+  back="$(date -j -f '%Y-%m-%d %H:%M' "$day $hm" '+%Y-%m-%d %H:%M' 2>/dev/null)" || back=""
+  [[ "$back" == "$day $hm" ]] || usage "--due '$1' is not a real date and time"
   echo "${BASH_REMATCH[1]} $((10#${BASH_REMATCH[2]})) $((10#${BASH_REMATCH[3]})) $((10#${BASH_REMATCH[5]:-9})) $((10#${BASH_REMATCH[6]:-0}))"
 }
 
@@ -491,6 +496,7 @@ cmd_task() {
       local home
       home="$(task_home)"
       if [[ "$home" == reminders ]]; then
+        [[ -z "$F_DUE" ]] || parse_due "$F_DUE" >/dev/null   # refuse a bad date before asking the user to confirm
         gate "add reminder '$F_TITLE'${F_LIST:+ to list '$F_LIST'}${F_DUE:+ due $F_DUE}"
         add_reminder "$F_TITLE" "$F_LIST" "$F_DUE"
       else

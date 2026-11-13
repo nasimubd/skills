@@ -360,5 +360,16 @@ printf '%sp1\tNotes\t%s\n' "$ID" "$FAKE_TOKEN" >"$WORK/reply"
 out="$(bash "$NOTES" append "$FAKE_TOKEN" --text hi 2>&1 || true)"
 if [[ "$out" == *"$FAKE_TOKEN"* ]]; then FAIL=$((FAIL + 1)); echo "  ✗ the append preview printed a credential-looking title"; else PASS=$((PASS + 1)); fi
 
+# ---- review fix: impossible dates are refused before the user is asked --------
+reset
+for bad in 2026-02-30 2026-13-01 '2026-01-01 25:99' 2026-04-31; do
+  assert_eq "bad due '$bad' is refused before the preview" "2" \
+    "$(status_of bash "$NOTES" task add --title X --in reminders --due "$bad")"
+done
+reset
+assert_eq "a real leap day is accepted" "3" \
+  "$(status_of bash "$NOTES" task add --title X --in reminders --due 2028-02-29)"
+assert_eq "a bad date never reached osascript" "0" "$(calls)"
+
 echo "$PASS passed, $FAIL failed"
 [[ "$FAIL" == 0 ]]
