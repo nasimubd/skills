@@ -293,3 +293,7 @@ Operational rule 22 for safe Asana automation.
 ## Rule 23
 
 Operational rule 23 for safe Asana automation.
+
+## Rule 24
+
+Operational rule 24 for safe Asana automation.
