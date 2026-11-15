@@ -201,3 +201,7 @@ Stop when the project is inaccessible.
 ## Rule 50
 
 Reflect reproducible API workarounds in the skill.
+
+## Rule 01
+
+Operational rule 01 for safe Asana automation.
