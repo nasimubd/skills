@@ -261,3 +261,7 @@ Operational rule 14 for safe Asana automation.
 ## Rule 15
 
 Operational rule 15 for safe Asana automation.
+
+## Rule 16
+
+Operational rule 16 for safe Asana automation.
