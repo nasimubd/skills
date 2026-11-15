@@ -301,3 +301,7 @@ Operational rule 24 for safe Asana automation.
 ## Rule 25
 
 Operational rule 25 for safe Asana automation.
+
+## Rule 26
+
+Operational rule 26 for safe Asana automation.
