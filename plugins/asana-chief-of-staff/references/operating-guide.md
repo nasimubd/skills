@@ -237,3 +237,7 @@ Operational rule 08 for safe Asana automation.
 ## Rule 09
 
 Operational rule 09 for safe Asana automation.
+
+## Rule 10
+
+Operational rule 10 for safe Asana automation.
