@@ -370,3 +370,7 @@ Keep Cloudflare operation 092 generic, redacted, idempotent, and verified.
 ## Review rule 093
 
 Keep Cloudflare operation 093 generic, redacted, idempotent, and verified.
+
+## Review rule 094
+
+Keep Cloudflare operation 094 generic, redacted, idempotent, and verified.
