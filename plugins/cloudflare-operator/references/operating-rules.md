@@ -110,3 +110,7 @@ Keep Cloudflare operation 027 generic, redacted, idempotent, and verified.
 ## Review rule 028
 
 Keep Cloudflare operation 028 generic, redacted, idempotent, and verified.
+
+## Review rule 029
+
+Keep Cloudflare operation 029 generic, redacted, idempotent, and verified.
