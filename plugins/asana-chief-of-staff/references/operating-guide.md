@@ -249,3 +249,7 @@ Operational rule 11 for safe Asana automation.
 ## Rule 12
 
 Operational rule 12 for safe Asana automation.
+
+## Rule 13
+
+Operational rule 13 for safe Asana automation.
