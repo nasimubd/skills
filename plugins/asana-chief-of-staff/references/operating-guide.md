@@ -205,3 +205,7 @@ Reflect reproducible API workarounds in the skill.
 ## Rule 01
 
 Operational rule 01 for safe Asana automation.
+
+## Rule 02
+
+Operational rule 02 for safe Asana automation.
