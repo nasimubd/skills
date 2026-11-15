@@ -162,3 +162,7 @@ Keep Cloudflare operation 040 generic, redacted, idempotent, and verified.
 ## Review rule 041
 
 Keep Cloudflare operation 041 generic, redacted, idempotent, and verified.
+
+## Review rule 042
+
+Keep Cloudflare operation 042 generic, redacted, idempotent, and verified.
