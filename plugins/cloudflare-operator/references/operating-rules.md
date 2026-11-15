@@ -98,3 +98,7 @@ Keep Cloudflare operation 024 generic, redacted, idempotent, and verified.
 ## Review rule 025
 
 Keep Cloudflare operation 025 generic, redacted, idempotent, and verified.
+
+## Review rule 026
+
+Keep Cloudflare operation 026 generic, redacted, idempotent, and verified.
