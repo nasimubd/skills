@@ -313,3 +313,7 @@ Operational rule 27 for safe Asana automation.
 ## Rule 28
 
 Operational rule 28 for safe Asana automation.
+
+## Rule 29
+
+Operational rule 29 for safe Asana automation.
