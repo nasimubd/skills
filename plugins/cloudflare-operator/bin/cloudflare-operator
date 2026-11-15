@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+import argparse,json,os,sys,urllib.parse,urllib.request,urllib.error
+BASE='https://api.cloudflare.com/client/v4'
+def call(method,path,payload=None):
+ token=os.environ.get('CLOUDFLARE_API_TOKEN')
+ if not token: raise SystemExit('CLOUDFLARE_API_TOKEN is required')
+ body=None if payload is None else json.dumps(payload).encode()
+ req=urllib.request.Request(BASE+path,data=body,method=method,headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
+ try:
+  with urllib.request.urlopen(req,timeout=20) as r: out=json.load(r)
+ except urllib.error.HTTPError as e: raise SystemExit(f'Cloudflare API {e.code}: request failed')
+ if not out.get('success'): raise SystemExit('Cloudflare API returned unsuccessful result')
+ return out.get('result')
+def main():
+ p=argparse.ArgumentParser(prog='cloudflare-operator'); s=p.add_subparsers(dest='cmd',required=True)
+ s.add_parser('health'); z=s.add_parser('zones'); z.add_argument('--name'); d=s.add_parser('dns'); d.add_argument('--zone-id',required=True); d.add_argument('--name'); d.add_argument('--type')
+ a=p.parse_args()
+ if a.cmd=='health': out=call('GET','/user/tokens/verify')
+ elif a.cmd=='zones': out=call('GET','/zones'+(('?name='+urllib.parse.quote(a.name)) if a.name else ''))
+ else:
+  q=[]
+  if a.name:q.append('name='+urllib.parse.quote(a.name))
+  if a.type:q.append('type='+urllib.parse.quote(a.type))
+  out=call('GET',f'/zones/{a.zone_id}/dns_records'+(('?'+'&'.join(q)) if q else ''))
+ print(json.dumps(out,indent=2))
+if __name__=='__main__': main()
