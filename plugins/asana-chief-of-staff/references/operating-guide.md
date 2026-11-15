@@ -221,3 +221,7 @@ Operational rule 04 for safe Asana automation.
 ## Rule 05
 
 Operational rule 05 for safe Asana automation.
+
+## Rule 06
+
+Operational rule 06 for safe Asana automation.
