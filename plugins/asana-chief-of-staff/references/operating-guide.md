@@ -277,3 +277,7 @@ Operational rule 18 for safe Asana automation.
 ## Rule 19
 
 Operational rule 19 for safe Asana automation.
+
+## Rule 20
+
+Operational rule 20 for safe Asana automation.
