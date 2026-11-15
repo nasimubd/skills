@@ -381,3 +381,7 @@ Operational rule 44 for safe Asana automation.
 ## Rule 45
 
 Operational rule 45 for safe Asana automation.
+
+## Rule 46
+
+Operational rule 46 for safe Asana automation.
