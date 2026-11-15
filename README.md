@@ -28,6 +28,7 @@ is stale.
 
 | Plugin | What it does | Category |
 |---|---|---|
+| [`asana-chief-of-staff`](./plugins/asana-chief-of-staff) | Autonomous Asana project management through the direct REST API, with free-plan workflows and guarded destructive actions. | `productivity` |
 | [`automation-scaffold`](./plugins/automation-scaffold) | Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release. | `devops` |
 | [`change-guardrails`](./plugins/change-guardrails) | Deterministic guardrails for shell commands: stops or asks before force-pushes to protected branches, recursive deletes of system paths, disk wipes, destructive SQL and similar, with a written-reason escape and an audit log. | `enforcement` |
 | [`click-path-guides`](./plugins/click-path-guides) | Write step-by-step UI click-path guides that are checked against the application's own definition: every bold control must exist in the source, menu paths follow one format, and position or colour wording is rejected. | `documentation` |

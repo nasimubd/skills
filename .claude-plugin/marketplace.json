@@ -164,6 +164,23 @@
         "prompt-injection",
         "developer-productivity"
       ]
+    },
+    {
+      "name": "asana-chief-of-staff",
+      "description": "Autonomous Asana project management through the direct REST API, with free-plan workflows and guarded destructive actions.",
+      "version": "1.8.0",
+      "source": "./plugins/asana-chief-of-staff",
+      "category": "productivity",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": [
+        "asana",
+        "project-management",
+        "leadscout",
+        "automation"
+      ]
     }
   ]
 }
