@@ -338,3 +338,7 @@ Keep Cloudflare operation 084 generic, redacted, idempotent, and verified.
 ## Review rule 085
 
 Keep Cloudflare operation 085 generic, redacted, idempotent, and verified.
+
+## Review rule 086
+
+Keep Cloudflare operation 086 generic, redacted, idempotent, and verified.
