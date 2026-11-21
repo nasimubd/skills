@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import { createInterface } from 'node:readline/promises';
+import { stdin, stdout } from 'node:process';
+import { baseline,collectIssues,parseRepo,report,publish,writePrivate,verifyBaseline } from './lib/core.mjs';
+
+const args=process.argv.slice(2), op=args[0];
+const option=(name, fallback)=>{const n=args.indexOf(`--${name}`);return n<0?fallback:args[n+1]};
+const git=(...a)=>execFileSync('git',a,{encoding:'utf8'}).trim();
+try {
+  if (!['preflight','inventory','audit','report','publish'].includes(op)) throw Error('usage: qia preflight|inventory|audit|report|publish [--repo owner/name] [--out directory]');
+  const repo=option('repo',parseRepo(git('remote','get-url','origin')));
+  if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) throw Error('invalid owner/repository');
+  const root=git('rev-parse','--show-toplevel'), commit=git('rev-parse','HEAD');
+  const out=resolve(option('out',join(root,'.qia-private')));
+  if (op==='preflight') { console.log(JSON.stringify({repo,root,commit,github:'not checked',deployment:'UNVERIFIED'})); process.exit(0); }
+  const basePath=join(out,'baseline.json'), reportPath=join(out,'report.json');
+  if (op==='inventory'||op==='audit') {
+    let b;
+    try { b=baseline(collectIssues(repo),repo); } catch(e) { writePrivate(join(out,'baseline-error.json'),{complete:false,error:e.message,timestamp:new Date().toISOString()}); throw Error(`issue baseline incomplete: ${e.message}`); }
+    writePrivate(basePath,b);
+    console.log(`Issue baseline collected first: ${b.issues.length} issues; ${basePath}`);
+    if(op==='inventory') process.exit(0);
+    const input=option('findings'); if(!input) throw Error('audit requires --findings path to agent-verified evidence JSON');
+    const findings=JSON.parse(readFileSync(input,'utf8'));
+    if(!Array.isArray(findings)) throw Error('findings must be an array');
+    for(const f of findings) if(f.reproduced===true&&f.commit!==commit) throw Error('confirmed finding commit differs from target HEAD');
+    const coveragePath=option('coverage');
+    const coverage=coveragePath?JSON.parse(readFileSync(coveragePath,'utf8')):{};
+    const r=report(b,findings,{commit,coverage}); writePrivate(reportPath,r);
+    console.log(JSON.stringify({report:reportPath,confirmed:r.confirmed,unverified:r.unverified,excluded:r.excluded,verdict:r.verdict}));
+  } else if(op==='report') {const r=JSON.parse(readFileSync(reportPath,'utf8'));console.log(JSON.stringify(r,null,2));}
+  else {
+    if(!args.includes('--publish-issues')) throw Error('publish requires --publish-issues');
+    const b=JSON.parse(readFileSync(basePath,'utf8')); verifyBaseline(b);
+    const r=JSON.parse(readFileSync(reportPath,'utf8'));
+    if(r.baselineChecksum!==b.checksum||r.repository!==repo||r.commit!==commit) throw Error('report provenance mismatch');
+    const reader=createInterface({input:stdin,output:stdout});
+    const answer=await reader.question(`Publish verified new findings to ${repo}? Type PUBLISH ${repo}: `);reader.close();
+    if(answer!==`PUBLISH ${repo}`) throw Error('publication not confirmed');
+    const published=publish(r,b,{authorization:true,confirm:true});writePrivate(join(out,'published.json'),published);r.issueRegister=[...(r.issueRegister||[]),...published];writePrivate(reportPath,r);console.log(JSON.stringify(published));
+  }
+} catch(e) {console.error(`qia: ${e.message}`);process.exitCode=1;}

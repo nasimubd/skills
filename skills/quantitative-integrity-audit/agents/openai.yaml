@@ -1,0 +1,4 @@
+interface:
+  display_name: Quantitative Integrity Audit
+  short_description: Issue-first trading-system integrity investigation
+  default_prompt: Use $quantitative-integrity-audit to audit this repository with reproducible evidence.

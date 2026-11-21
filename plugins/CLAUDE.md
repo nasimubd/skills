@@ -132,3 +132,7 @@ SCRIPT_EOF
 Never shadow a Claude Code built-in slash command. And when a command name equals its
 plugin name, the full `/<plugin>:<command>` form is mandatory — typing `/<plugin>` alone
 is read as the plugin prefix, not the command.
+
+## Quant integrity auditor
+
+`quant-integrity-auditor` links to the canonical skill under `skills/`. Keep its Claude skill body and scripts shared; never fork them. Its issue inventory precedes stage work and publication is separately gated.

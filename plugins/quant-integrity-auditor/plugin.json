@@ -1,0 +1,5 @@
+{
+  "name": "quant-integrity-auditor",
+  "description": "Issue-first quantitative trading integrity audit with reproducible evidence and guarded reporting.",
+  "author": {"name":"nasimubd","url":"https://github.com/nasimubd"}
+}
