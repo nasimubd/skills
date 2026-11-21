@@ -1,3 +1,27 @@
+# [1.9.0](https://github.com/nasimubd/skills/compare/v1.8.0...v1.9.0) (2026-11-21)
+
+
+### Bug Fixes
+
+* **asana:** assert setup constants from script namespace ([a826746](https://github.com/nasimubd/skills/commit/a826746ef4c80cdc1ce5234787a6c299b547ee86))
+* **asana:** load extensionless CLI in tests ([8a77be9](https://github.com/nasimubd/skills/commit/8a77be9f7423e7c1ae768b8d86d54cfb79790995))
+* **asana:** make project setup outcome-oriented ([ae73a7f](https://github.com/nasimubd/skills/commit/ae73a7f0288b89ff1fab7b8ae0845ce6bf788597))
+* **asana:** satisfy skill evolution contract ([5ca22c5](https://github.com/nasimubd/skills/commit/5ca22c596a38bb05aee72e2cf607534f57f3b87d))
+* **cloudflare:** make privacy scan generic ([fad640b](https://github.com/nasimubd/skills/commit/fad640b3135eb40466acfe101c375624354c3b06))
+* synchronize auditor readmes ([040384b](https://github.com/nasimubd/skills/commit/040384be1f3c0f384c46d6ee0444fbdf5f80c86d))
+
+Synchronize the auditor plugin and root README entries with the repository validation contract.
+
+
+### Features
+
+* add quantitative integrity auditor ([5fe51c1](https://github.com/nasimubd/skills/commit/5fe51c1923df4e3f8a5d08d945b89254b529c1b3))
+
+Adds the shared quantitative integrity auditor for Claude Code and Codex with issue-first baselines, root-cause exclusion, reproducible evidence, guarded GitHub publication, synthetic evaluations, and cross-platform package parity.
+* **asana:** add chief of staff plugin foundation ([9d07cca](https://github.com/nasimubd/skills/commit/9d07cca1e892eeddb7f1a82d5ff0df4ff1298c1c))
+* **asana:** register marketplace plugin ([f814daf](https://github.com/nasimubd/skills/commit/f814daf7736bbd368bb07856ac6b185dc9fbbd32))
+* **cloudflare:** add operator plugin implementation ([dee25b2](https://github.com/nasimubd/skills/commit/dee25b2c68e46f5657225e2237c7fac5f88408d2))
+
 # [1.8.0](https://github.com/nasimubd/skills/compare/v1.7.0...v1.8.0) (2026-11-12)
 
 
