@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Release components",
+  "description": "Every app, flow, n8n workflow and Make scenario released from this repo. Each is versioned and tagged on its own (docs/RELEASE.md).",
+  "type": "object",
+  "required": ["components"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "displayName", "path", "platform"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Component id: commit scope, package name in <path>/package.json and tag prefix (<id>-vX.Y.Z).",
+            "type": "string",
+            "pattern": "^(app|flow|n8n|make)-[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "kind": { "enum": ["canvas-app", "cloud-flow", "n8n-workflow", "make-scenario"] },
+          "displayName": { "description": "Name as it appears in the platform.", "type": "string" },
+          "path": { "description": "Component folder, relative to the repo root. Only commits touching it count toward its releases.", "type": "string" },
+          "platform": {
+            "description": "Where the production copy lives. IDs only, never secrets.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "environmentId": { "type": "string" },
+              "appId": { "type": "string" },
+              "flowId": { "type": "string" },
+              "solution": { "type": "string" },
+              "instance": { "type": "string" },
+              "workflowId": { "type": "string" },
+              "zone": { "type": "string" },
+              "scenarioId": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

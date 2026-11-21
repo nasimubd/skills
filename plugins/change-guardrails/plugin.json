@@ -1,0 +1,8 @@
+{
+  "name": "change-guardrails",
+  "description": "Deterministic guardrails for shell commands: stops or asks before force-pushes to protected branches, recursive deletes of system paths, disk wipes, destructive SQL and similar, with a written-reason escape and an audit log.",
+  "author": {
+    "name": "nasimubd",
+    "url": "https://github.com/nasimubd"
+  }
+}

@@ -1,0 +1,22 @@
+Screens:
+  HomeScreen:
+    Children:
+      - NewButton:
+          Control: Button
+          Properties:
+            Text: ="New expense"
+            Fill: =RGBA(0, 120, 212, 1)
+      - RefreshButton:
+          Control: Button
+          Properties:
+            Text: ="Refresh"
+  FormScreen:
+    Children:
+      - AmountInput:
+          Control: TextInput
+          Properties:
+            HintText: ="Amount"
+      - SubmitButton:
+          Control: Button
+          Properties:
+            Text: ="Submit"

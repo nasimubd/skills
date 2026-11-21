@@ -2,6 +2,7 @@
 set -euo pipefail
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export NO_COLOR=1
 source "$PLUGIN_ROOT/lib/segment-git.sh"
 
 PASS=0
@@ -17,30 +18,48 @@ assert_eq() {
   fi
 }
 
-SCRATCH_REPO="$(mktemp -d)"
-git init -q -b main "$SCRATCH_REPO"
-git -C "$SCRATCH_REPO" commit -q --allow-empty -m init
-trap 'rm -rf "$SCRATCH_REPO"' EXIT
+REPO="$(mktemp -d)"
+UPSTREAM="$(mktemp -d)"
+NON_GIT="$(mktemp -d)"
+trap 'rm -rf "$REPO" "$UPSTREAM" "$NON_GIT"' EXIT
+git init -q -b main "$REPO"
+git -C "$REPO" config user.name t
+git -C "$REPO" config user.email t@example.com
+git -C "$REPO" commit -q --allow-empty -m init
 
-assert_eq "clean repo, branch only" "main" "$(git_current_branch "$SCRATCH_REPO")"
-assert_eq "clean repo, no dirty state" "0 0 0" "$(git_dirty_counts "$SCRATCH_REPO")"
+assert_eq "clean repo: every indicator is zero, no upstream arrows" \
+  "M:0 D:0 S:0 U:0 ≡:0 ⚠:0" "$(segment_git "{\"cwd\":\"$REPO\"}")"
+assert_eq "clean repo counts" "0 0 0 0 0" "$(git_dirty_counts "$REPO")"
 
-echo "b" >"$SCRATCH_REPO/tracked.txt"
-git -C "$SCRATCH_REPO" add tracked.txt
-git -C "$SCRATCH_REPO" commit -q -m "add tracked"
-echo "c" >>"$SCRATCH_REPO/tracked.txt"
-echo "d" >"$SCRATCH_REPO/staged.txt"
-git -C "$SCRATCH_REPO" add staged.txt
-echo "e" >"$SCRATCH_REPO/untracked.txt"
+printf 'a\n' >"$REPO/tracked.txt"; printf 'b\n' >"$REPO/gone.txt"
+git -C "$REPO" add . && git -C "$REPO" commit -q -m files
+printf 'more\n' >>"$REPO/tracked.txt"          # modified
+rm "$REPO/gone.txt"                              # deleted
+printf 'c\n' >"$REPO/staged.txt" && git -C "$REPO" add staged.txt   # staged
+printf 'd\n' >"$REPO/new.txt"                   # untracked
+assert_eq "one of each, counted separately" "1 1 1 1 0" "$(git_dirty_counts "$REPO")"
+assert_eq "dirty repo segment" "M:1 D:1 S:1 U:1 ≡:0 ⚠:0" "$(segment_git "{\"cwd\":\"$REPO\"}")"
 
-assert_eq "dirty repo counts" "1 1 1" "$(git_dirty_counts "$SCRATCH_REPO")"
-assert_eq "dirty repo full segment" "main +1~1?1" "$(segment_git "{\"cwd\":\"$SCRATCH_REPO\"}")"
+git -C "$REPO" stash -q -u
+assert_eq "a stash is counted" "1" "$(git_stash_count "$REPO")"
 
-assert_eq "no upstream configured" "0 0" "$(git_ahead_behind "$SCRATCH_REPO")"
+# Ahead and behind appear only once an upstream exists.
+git init -q --bare -b main "$UPSTREAM"
+git -C "$REPO" remote add origin "$UPSTREAM"
+git -C "$REPO" push -q -u origin main
+git -C "$REPO" commit -q --allow-empty -m local
+assert_eq "one commit ahead of upstream" "1 0" "$(git_ahead_behind "$REPO")"
+assert_eq "arrows render with an upstream" "M:0 D:0 S:0 U:0 ↑:1 ↓:0 ≡:1 ⚠:0" "$(segment_git "{\"cwd\":\"$REPO\"}")"
 
-NON_GIT_DIR="$(mktemp -d)"
-trap 'rm -rf "$SCRATCH_REPO" "$NON_GIT_DIR"' EXIT
-assert_eq "non-git dir yields empty segment" "" "$(segment_git "{\"cwd\":\"$NON_GIT_DIR\"}")"
+# A merge conflict is counted as a conflict, not as a modification.
+git -C "$REPO" checkout -q -b other
+printf 'x\n' >"$REPO/tracked.txt"; git -C "$REPO" commit -q -am other
+git -C "$REPO" checkout -q main
+printf 'y\n' >"$REPO/tracked.txt"; git -C "$REPO" commit -q -am main-side
+git -C "$REPO" merge -q other >/dev/null 2>&1 || true
+assert_eq "conflict counted once" "0 0 0 0 1" "$(git_dirty_counts "$REPO")"
+
+assert_eq "non-git directory yields nothing" "" "$(segment_git "{\"cwd\":\"$NON_GIT\"}")"
 
 echo "test-segment-git.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]

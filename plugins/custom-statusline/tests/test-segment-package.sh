@@ -68,8 +68,12 @@ unset -f fetch_owner_packages
 
 assert_eq "missing repo info yields empty" "" "$(segment_package '{}')"
 
+# Payloads are built with printf: escaped quotes and a comma inside braces in a quoted
+# $(...) are mangled by bash 3.2 (macOS's /bin/bash), which turned these into invalid JSON.
+payload_for() { printf '{"workspace":{"repo":{"owner":"%s","name":"%s"},"current_dir":"%s"}}' "$1" "$2" "$3"; }
+
 assert_eq "real repo, manifest in sync with release" "in-sync" \
-  "$(segment_package "{\"workspace\":{\"repo\":{\"owner\":\"nasimubd\",\"name\":\"skills\"},\"current_dir\":\"$PLUGIN_ROOT/../..\"}}")"
+  "$(segment_package "$(payload_for nasimubd skills "$PLUGIN_ROOT/../..")")"
 
 # Both sources present: a cache-seeded package summary for a repo that
 # can't exist, plus a manifest ahead of its (also seeded) latest release.
@@ -77,7 +81,7 @@ cache_set "owner-zzz/repo-zzz/package" "widget:2v"
 cache_set "owner-zzz/repo-zzz/release" "v1.0.0"
 echo '{"version":"1.1.0"}' >"$MANIFEST_SCRATCH/package.json"
 assert_eq "both package sources render together" "widget:2v ahead" \
-  "$(segment_package "{\"workspace\":{\"repo\":{\"owner\":\"owner-zzz\",\"name\":\"repo-zzz\"},\"current_dir\":\"$MANIFEST_SCRATCH\"}}")"
+  "$(segment_package "$(payload_for owner-zzz repo-zzz "$MANIFEST_SCRATCH")")"
 
 echo "test-segment-package.sh: $PASS passed, $FAIL failed"
 [[ "$FAIL" -eq 0 ]]

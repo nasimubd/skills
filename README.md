@@ -26,11 +26,19 @@ plugins you can install, and the tooling to build your own.
 list here is derived from it; if the two disagree, the manifest is right and this README
 is stale.
 
-| Plugin | What it does |
-|---|---|
-| [`custom-statusline`](./plugins/custom-statusline) | Cross-platform Claude Code renderer and native Codex footer adapter. | Multi-line Claude Code status line — session, directory, git status, GitHub release/deployment/package signals, context-window usage, model and cost — built from scratch from what Claude Code's own statusline payload already provides. |
-| [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing tasks across deterministic tools, decision models, Argus, Agent-S, and human approval. |
-| [`quant-integrity-auditor`](./plugins/quant-integrity-auditor) | Issue-first quantitative trading audit with reproducible findings, root-cause exclusion and guarded GitHub reporting. |
+| Plugin | What it does | Category |
+|---|---|---|
+| [`asana-chief-of-staff`](./plugins/asana-chief-of-staff) | Autonomous Asana project management through the direct REST API, with free-plan workflows and guarded destructive actions. | `productivity` |
+| [`cloudflare-operator`](./plugins/cloudflare-operator) | Safely inspect and manage Cloudflare zones and DNS through scoped API tokens, with optional OAuth for multi-user deployments. | `devops` |
+| [`automation-scaffold`](./plugins/automation-scaffold) | Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release. | `devops` |
+| [`change-guardrails`](./plugins/change-guardrails) | Deterministic guardrails for shell commands: stops or asks before force-pushes to protected branches, recursive deletes of system paths, disk wipes, destructive SQL and similar, with a written-reason escape and an audit log. | `enforcement` |
+| [`click-path-guides`](./plugins/click-path-guides) | Write step-by-step UI click-path guides that are checked against the application's own definition: every bold control must exist in the source, menu paths follow one format, and position or colour wording is rejected. | `documentation` |
+| [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals. | `productivity` |
+| [`investigation-tools`](./plugins/investigation-tools) | Read-only triage briefs and blameless incident notes whose claims carry evidence: scans fetched content for planted instructions, keeps secrets out of what is saved, and takes verifiable snapshots before any change. | `devops` |
+| [`quant-integrity-auditor`](./plugins/quant-integrity-auditor) | Issue-first quantitative trading audit with reproducible findings and guarded GitHub reporting. |
+| [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing natural-language tasks across tools, models, desktop automation, and approval gates. | `productivity` |
+| [`teams-commander`](./plugins/teams-commander) | Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open the chat in the Teams app with the message on your clipboard. | `productivity` |
+| [`typeless-migrate`](./plugins/typeless-migrate) | Safely archive Typeless history, recordings, settings, and dictionary-import data without copying account credentials. | `productivity` |
 
 The repository also includes a Codex-compatible package under
 [`codex-plugins/norn-agent`](./codex-plugins/norn-agent). Both integrations use
@@ -55,6 +63,8 @@ the same external [Norn runtime](https://github.com/nasimubd/norn).
 .mise/tasks/           # runnable tasks; the release pipeline lives here
 scripts/               # gates and release tooling
 plugins/               # one directory per plugin
+skills/                # platform-neutral Agent Skills (Claude Code and Codex)
+.agents/skills/        # Codex registration: one symlink per skills/ entry
 codex-plugins/         # Codex-compatible plugin packages
 docs/                  # ADRs, design specs, release workflow
 ```
@@ -65,6 +75,7 @@ docs/                  # ADRs, design specs, release workflow
 node scripts/validate-plugins.mjs        # manifests, schema, paths, dependencies
 node scripts/check-version-equality.mjs  # the version lockstep actually holds
 node scripts/validate-skill-body.mjs     # SKILL.md structural contract
+node scripts/validate-agent-skills.mjs   # shared skills: contract and .agents/skills registration
 mise run release:preflight               # everything, plus tree and commit state
 ```
 
@@ -76,6 +87,8 @@ Each gate prints how many things it examined rather than a bare pass — "0 disc
 "0 failed" are different facts, and a green tick cannot distinguish them.
 
 ## For plugin developers
+
+Plugin READMEs are maintained as part of the plugin change. The README synchronization gate fails when a registered plugin lacks its own README, its marketplace description, its row in this Plugin table, or a root marketplace link, and when an unregistered plugin directory exists. Run it after every plugin addition, fix, or removal.
 
 See [plugins/CLAUDE.md](./plugins/CLAUDE.md) for the full contract. The traps worth
 knowing before you write anything:
@@ -106,8 +119,9 @@ no longer has. `validate-skill-body.mjs` treats a mismatch as an error.
 
 **`${CLAUDE_PLUGIN_ROOT}` is valid only in manifests** — `hooks.json`, `.mcp.json`,
 `.lsp.json`. It is not a shell variable, it never reaches the Bash tool, and a `SKILL.md`
-that references it silently receives an empty string. Use `skills-plugin-root <plugin>`
-in skill bodies.
+that references it silently receives an empty string. Ship the plugin's command in
+`bin/<plugin>` instead: Claude Code puts an enabled plugin's `bin/` on the Bash PATH,
+so skill bodies call it by name.
 
 ## Versioning
 
@@ -124,7 +138,7 @@ is the changelog.
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full process — plugin structure, gates
-to run, commit conventions, and the PR/squash-merge flow.
+to run, commit conventions, and the PR/rebase-merge flow.
 
 ## Code of Conduct
 
@@ -137,3 +151,5 @@ See [SECURITY.md](./SECURITY.md) to report a vulnerability privately.
 ## License
 
 [MIT](./LICENSE)
+
+| [`typeless-migrate`](./plugins/typeless-migrate) | Safely archive Typeless history, recordings, settings, and dictionary-import data without copying account credentials. |

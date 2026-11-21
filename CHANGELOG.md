@@ -1,3 +1,210 @@
+# [1.8.0](https://github.com/nasimubd/skills/compare/v1.7.0...v1.8.0) (2026-11-12)
+
+
+### Features
+
+* **click-path-guides:** lint UI guides against the app definition ([a64a1bf](https://github.com/nasimubd/skills/commit/a64a1bf6910ce38365564b67bf45183a871efdcf))
+
+A guide that names a control which does not exist is worse than no guide. The plugin extracts the labels from the application's own definition (JSON, YAML including Power Fx style, or text, optionally restricted to named keys) and lints a guide against them: every bold term must be a label in the source, menu paths read **File** > **Open**, controls are never identified by position, colour, shape or size, and the guide needs a Prerequisites section, consecutive numbered steps and no placeholders or filler.
+
+A screenshot, a PDF, an empty definition or a source with no labels is an error, never a pass. The unfilled template fails the lint on purpose. Terms the definition cannot hold need an explicit --allow and a note in the guide that they were not verified.
+
+Adds the guide and lint skills, the bin command, the style reference and the registrations (marketplace entry, README table, plugin list).
+* **investigation-tools:** add triage-brief and incident-rca ([12e83fc](https://github.com/nasimubd/skills/commit/12e83fc8e434dc7f1b7f89ca588ebd0757c66b4c))
+
+triage-brief reads a ticket or request with read-only means, screens the fetched text for planted instructions and secrets, writes a brief whose every fact carries a source tag, and stops for approval. incident-rca snapshots what it will change, applies only an approved minimal fix, never declares the incident closed itself, and writes a blameless root-cause note with one prevention step.
+
+The investigation-tools command backs both: scan and redact find and remove secret-like strings (reporting line and kind, never the value), untrusted flags instruction-like text, brief and rca lint the documents (evidence, plan state, blame wording, prevention count, a rollback snapshot that still verifies), and snapshot create, verify, list and restore make checksummed, owner-only copies and never overwrite.
+
+Live trials found two defects, both fixed: a raw secret stayed in the scratch folder, and the incident skill asked for approval twice.
+
+Adds the references, the templates, the registrations (marketplace entry, README table, plugin list) and 122 tests.
+
+# [1.7.0](https://github.com/nasimubd/skills/compare/v1.6.0...v1.7.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **repo:** make the git protocol test ignore an inherited identity ([e69ce7c](https://github.com/nasimubd/skills/commit/e69ce7cff0ea657115a87e9fb3103e4540f5dea1))
+
+Git's identity variables take precedence over every config file. The release pipeline exports its bot identity, so inside a release the new identity tests could not see the state they set up: git committed without a configured identity, and a commit meant to carry a machine-derived identity carried the bot's. The test passed standalone and failed in the release preflight.
+
+The test now clears GIT_AUTHOR_* and GIT_COMMITTER_* at the top. It passes in a plain environment and with the pipeline's variables exported.
+* **repo:** refuse to guess or publish a machine-derived identity ([c7e7b2a](https://github.com/nasimubd/skills/commit/c7e7b2aba3c69e7fb8afbd291df8079e708cc77f))
+
+With no user.name and user.email configured, git invents an identity from the operating-system account: its full name and an address at the host name or IP. In a public repository that publishes both, and removing them later means rewriting history and moving released tags. Nothing in the git protocol checked who a commit was attributed to, and the failure is silent.
+
+hooks:install now sets user.useConfigOnly so git refuses instead of guessing, and fills a missing identity from the signed-in gh account (login and its no-reply address), leaving any configured identity alone. scripts/commit-identity.cjs rejects an email at an IP address, a bare host name or a private network name, and an empty name; the commit-msg hook runs it before reading the message and pr:check runs it for every author and committer on the branch.
+
+The rule is written in .claude/rules/git.md with an ADR. The tests cover accepted and rejected identities, the hook, pr:check in a throwaway clone, and git refusing to commit without an identity.
+
+
+### Features
+
+* **change-guardrails:** add deny-or-ask guardrails for shell commands ([0e75e3a](https://github.com/nasimubd/skills/commit/0e75e3af4abcdced983b6127fc424efd5769d0c5))
+
+A PreToolUse hook on Bash judges each command against a plain-text rules file and answers deny or ask; no match leaves the normal permission flow alone. The shipped rules cover force-pushes and deletes of protected branches, recursive deletes of system paths, disk wipes, destructive SQL, piping a download or decoded string into a shell, uploads, package publishing and infrastructure or cloud deletes.
+
+Quoted text and heredoc bodies are removed before matching, so a commit message that mentions a destructive command does not trigger a rule, while sh -c and eval payloads still do. A GUARD-OK marker with a written reason turns a deny into an ask, never an allow. The hook fails open on its own errors; a broken rules file makes every command ask and names the line. The audit log records decisions and rule ids, never command text.
+
+Adds the check and health skills, a bin command, the rules reference, and the registrations (marketplace entry, README table, plugin list).
+
+# [1.6.0](https://github.com/nasimubd/skills/compare/v1.5.0...v1.6.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **custom-statusline:** build package test payloads portably ([0797881](https://github.com/nasimubd/skills/commit/079788108ac5678997dbd1ea85e21701f9531309))
+
+Two assertions passed a JSON payload written with escaped quotes and a comma inside braces to segment_package through a quoted command substitution. Under bash 3.2, the macOS /bin/bash, that mangles the quotes, so jq received invalid JSON and the segment returned nothing: the test failed on macOS and passed on bash 5. The segment itself was never wrong.
+
+Build the payloads with printf, which is the same on both.
+* **custom-statusline:** restore gh PATH and portable timeout ([4e337c0](https://github.com/nasimubd/skills/commit/4e337c0c476e287720d07e7a4d6730b1830fffa8))
+
+Claude Code starts the status line with a minimal PATH, so gh was not found and the public/private badge silently disappeared. A rewrite of statusline.sh for the Codex footer had dropped the PATH block that an earlier fix added, and the guarding test kept passing because the release tag now comes from git rather than gh.
+
+The visibility lookup also called `timeout`, which macOS does not ship, so the badge was missing even from an interactive shell. It now uses timeout, gtimeout or a background watchdog.
+
+The regression test now asserts the visibility badge with a stub gh under a scratch HOME, fails without the fix, and needs no network.
+* **repo:** run the regression suite under bash 3.2 ([6e6cf34](https://github.com/nasimubd/skills/commit/6e6cf342289d0e0fbe4083b0bd0c8698e9d59f91))
+
+The suite stopped on macOS with "bad substitution: no closing `)'" before running a single test. The test discovery was written inline inside a process substitution, `&lt; &lt;( ... )`, and bash 3.2 (the macOS /bin/bash) cannot parse a comment containing parentheses or an apostrophe there. The documented gate, `mise run test-marketplace-hook-regression-suite`, therefore could not be used on a stock Mac.
+
+Move the discovery into a function and read it with `< <(fn | sort)`. The commands and their order are unchanged, so the same files are found.
+
+
+### Features
+
+* **custom-statusline:** add segments for the target status line ([476da54](https://github.com/nasimubd/skills/commit/476da54fa46173f0cc0186835095555c57893398))
+
+Add the segments the status line is assembled from, each a small tested function over the stdin payload: git indicators (modified, deleted, staged, untracked, ahead, behind, stashes, conflicts), model id with effort and thinking, a context bar that marks the compaction trigger and estimates the room left, a UTC and local clock, the session transcript folder and id, the latest release with its age, and the working directory with repository URL and visibility.
+
+A shared runtime module hardens PATH, runs gh through a portable timeout (macOS has no `timeout`, which made the shell report exit 127), strips proxy variables, honours NO_COLOR and stays bash 3.2 compatible.
+
+The compaction trigger is an estimate, because Claude Code publishes no threshold: it is derived in one function and every figure that depends on it carries a `~`. The release test now stubs gh instead of calling the GitHub API.
+
+The entrypoint still uses the old script; the next commit switches it.
+* **custom-statusline:** assemble the status line from its segments ([cb1054b](https://github.com/nasimubd/skills/commit/cb1054bb9cc3f86028d15d64de0cb2ba73736f96))
+
+Replace the standalone entrypoint with one that sources the runtime and segment modules and prints one line per segment, in the order of the status line it is meant to match: git indicators and latest release, model with effort and thinking, a context bar that marks the compaction trigger, a UTC and local clock, directory with repository URL and visibility, and the session transcript folder and id.
+
+An earlier rewrite had left the segment modules and their tests passing while no longer being what ran, and the docs describing a design the entrypoint had dropped. The integration test now runs the real entrypoint under /bin/bash 3.2 with a minimal PATH and asserts every line, so that drift fails a test. Deployment and package lines stay available behind CUSTOM_STATUSLINE_EXTRAS, off by default. The branch is shown as the URL's /tree/&lt;branch> off main and master, a missing line is omitted instead of replaced by an error, and NO_COLOR is honoured.
+
+The README, segment reference, install skill and maintainer notes are rewritten to match, including the compaction readout being an estimate.
+* **teams-commander:** add enforced message style settings ([9eb1e0c](https://github.com/nasimubd/skills/commit/9eb1e0c2f89f091720d032606883ab0a4bbee559))
+
+Add `teams-commander style` with two per-user rules kept in a local style.json: `bold` (allow or never) and banned words with an optional replacement. verify refuses a message that breaks them (exit 3), open repeats the check so a rule added after verify still blocks the send, and storing a message prints a non-blocking warning.
+
+Banned terms match whole words in any case, so a short abbreviation does not flag longer words. An unreadable style.json fails closed with a clear message instead of silently switching the rules off. The file lives in the config directory and is never committed.
+
+The skills now tell the drafter to read `style show` first, and the setup skill documents how to set a rule.
+
+# [1.5.0](https://github.com/nasimubd/skills/compare/v1.4.0...v1.5.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **automation-scaffold:** check the role before editing the About ([e47321d](https://github.com/nasimubd/skills/commit/e47321deb065300452c10bf0562b68dacf26ad8f))
+
+GitHub lets only Maintain or Admin edit a repository's description and topics, and answers a write-only collaborator with a bare 404. publish about --yes now checks the role first and prints the exact gh repo edit command for the owner. A project.json without a github block (repos scaffolded before the About existed) used to report 'already up to date'; it is now refused with what to add. Found on jgondaaegis/AEGIS-Matter-Status.
+* **repo:** enforce plugin README synchronization ([c46674d](https://github.com/nasimubd/skills/commit/c46674d02219cffb6ffe43507f979e25a57b4a9a))
+* **repo:** validate plugin README table rows ([9826ea1](https://github.com/nasimubd/skills/commit/9826ea182b2c821840e3c04cdb02b642ddda8fdb))
+
+
+### Features
+
+* **typeless-migrate:** add safe archive workflow ([4044a53](https://github.com/nasimubd/skills/commit/4044a53c2fa9990ab5cf7912e1468f774e3c7143))
+
+# [1.4.0](https://github.com/nasimubd/skills/compare/v1.3.0...v1.4.0) (2026-10-29)
+
+
+### Bug Fixes
+
+* **agent-skills:** register every shared skill for Codex and enforce it ([c2433ba](https://github.com/nasimubd/skills/commit/c2433ba8f067a55cf72e0985e81ed31a12a93ff9))
+
+Codex discovers repository skills through .agents/skills/. Only custom-statusline was linked there, so logo-design-agency and open-source-stack-catalog passed every gate while staying invisible to Codex.
+
+Add the two missing links, and make validate-agent-skills.mjs fail when a skills/&lt;name> has no .agents/skills/&lt;name> resolving to it, or when a link there points at no shared skill.
+* **automation-scaffold:** download live app packages by a fresh link and report list writers ([3401689](https://github.com/nasimubd/skills/commit/3401689ce6cbb65d633a875b735f57d4a5cd03ac))
+
+The versions API returns the package link signed at publish time, which expires seven days later, so any app not republished that week failed with HTTP 403. Download from the app endpoint's freshly signed link instead, after checking its blob is the live version's.
+
+Discovery never follows a list back to what writes it, which hid the n8n workflows that fill a read-only viewer app's list. They are now reported under notFollowed with evidence, and the scaffold skill asks the user which to add as seeds.
+* **automation-scaffold:** fit commit headers and set the repository About ([#11](https://github.com/nasimubd/skills/issues/11)) ([ffedeba](https://github.com/nasimubd/skills/commit/ffedeba3215e7297c5cb8d74af3f2357eca0053b))
+
+The first real scaffold stopped at commitlint: component ids repeated the project name (n8n-aegis-matter-status-asana-to-microsoft-list), giving a 120-character header against a 72-character limit. Ids now drop the project name and stop at 36 characters on a word boundary, and a display name that would still overflow moves to the commit body.
+
+The same run left the GitHub repository with no description and no topics. The scaffold now records both in project.json (a factual sentence counted from the components; topics from the component kinds and the release convention), and the new `publish about` phase applies them after the merge: an empty description is set, an existing one is kept, and topics are only added. `about --check` and release verification fail while either is missing.
+* **automation-scaffold:** pin the commit author over git env variables ([da4f737](https://github.com/nasimubd/skills/commit/da4f737443719092c8b35deca1625c0e2ed4ae70))
+
+semantic-release exports GIT_AUTHOR_* and GIT_COMMITTER_*, which override git -c user.name/user.email. publish.sh now sets them explicitly, so the configured author is used for every commit even when it runs under such a caller. Found when the marketplace release preflight ran the scaffold tests inside semantic-release.
+* **custom-statusline:** expect the test's own path, not ~/skills ([e7ee153](https://github.com/nasimubd/skills/commit/e7ee153ccdd7a250b417bbb1f20553b58d579690))
+
+The integration test expected the literal ~/skills in the rendered status line, which holds only on a machine where the repository is checked out there. statusline.sh shows the working directory with $HOME as ~, so the test now expects exactly that for wherever it runs. It was failing the release preflight on a checkout at ~/AegisLaw/skills.
+* repair cross-platform custom statusline ([dffc4c8](https://github.com/nasimubd/skills/commit/dffc4c8e6f1e37e03b7202099440a4a8f8f9daf2))
+
+Copy the Ligo reference renderer for Claude Code with its colors, context bar, directory, Git data, and session identifier. Add the reproducible shared skill and native Codex footer configuration.
+* **repo:** enforce the git protocol with commitlint and pr:check ([#13](https://github.com/nasimubd/skills/issues/13)) ([9c28f05](https://github.com/nasimubd/skills/commit/9c28f05dfcb987764d50d4fce5602301b03949f6))
+
+The convention in use (Conventional Commits, &lt;type>/&lt;slug> branches, rebase and merge, no AI attribution) was only written down, and the documents still said squash. Nothing checked it, so a bad message or an attribution line could reach main.
+
+commitlint.config.cjs enforces Conventional Commits with a 72-character header, scopes read from plugins/, skills/ and codex-plugins/ plus repo scopes, and a no-ai-attribution rule (scripts/no-ai-attribution.cjs). The commit-msg hook runs it on every commit; `mise run hooks:install` sets it up. `mise run pr:check` checks the branch name, every commit since origin/main, the PR title and the PR body. CONTRIBUTING, the PR template, the root CLAUDE.md and .claude/rules/git.md (now tracked) say rebase and merge; the decision is docs/adr/2026-10-28-git-protocol.md. test-git-protocol.sh covers it.
+* **teams-commander:** one message command, opened in the Teams app with one copy ([#12](https://github.com/nasimubd/skills/issues/12)) ([c8a55f9](https://github.com/nasimubd/skills/commit/c8a55f9bcdee69652411d44fa6f6abdc441977a9))
+
+The user found five commands too complex and got two copies of each message. draft, reply and send are now one skill, `message`, which picks the action from the request; setup and health stay separate.
+
+The chat now opens in the Teams desktop app through msteams://, which Microsoft documents as skipping the browser. The link no longer carries message=: the text was both pre-filled and on the clipboard, and in live tests Teams also doubled pre-filled text, ignored it when the chat had a saved draft and dropped line breaks. The clipboard is the only copy; the user pastes once and presses Enter. Verified end to end on the user's self-chat. Health also prints its summary line again.
+* **tests:** run the git protocol test from main as well ([a69f9a5](https://github.com/nasimubd/skills/commit/a69f9a557b1099bda5be3089217a01d318e3c308))
+
+The test's throwaway clone checks out whatever branch this repository is on. From main, `git branch -f main HEAD` refused to move the checked-out branch, so the test failed in the release preflight while passing on a feature branch. `checkout -B main` works from either.
+
+
+### Features
+
+* add provenance-pinned open-source registry ([#5](https://github.com/nasimubd/skills/issues/5)) ([3d15679](https://github.com/nasimubd/skills/commit/3d15679db66fa858f39e0b792b25e340eb5d228e))
+* **automation-scaffold:** add the scaffolded repository template ([4ece92a](https://github.com/nasimubd/skills/commit/4ece92a93dfe67d6c1d3ea7327b3bdf80bace96b))
+
+The layout, version control and git protocol every scaffolded automation repository gets: per-component releases (semantic-release-monorepo) with production pins, Conventional Commits checked by commitlint and a commit-msg hook, mise tasks, rebase-and-merge PRs, and no AI attribution, stated in CLAUDE.md and .claude/rules/git.md and enforced by commitlint and pr:check.
+
+scripts/lib/platform.js is the single read-only platform layer for Power Apps, Power Automate, n8n and Make: tokens, digests and redaction. Secrets are redacted where they appear and wherever the same value recurs; a Keychain value returned hex-encoded by security -w is decoded.
+
+Written from the documented behaviour of a private reference repository; no code or organisation identifiers were copied.
+* **automation-scaffold:** scaffold, release and verify automation repos ([b0ae10a](https://github.com/nasimubd/skills/commit/b0ae10afbfe35321534fd7dc34abbd094622af4d))
+
+Three skills: setup, health and one scaffolding command.
+
+- discover: read-only, Power Apps, Power Automate and n8n only. Follows
+  the event chain with evidence for every link: lists an app writes
+  (Patch/Remove/form in the live .pa.yaml), the flows those writes
+  trigger, the n8n webhooks and sub-workflows they call. Read-only lists
+  are documented, not followed; [OPT]/TEST copies are left out.
+- scaffold: renders the template, exports and pins each component.
+- publish: uses the repository the user names, or creates it; commits in
+  convention order, runs pr:check, rebase-merges the PR, releases v1.0.0
+  and verifies tags, releases, pins and history.
+
+The upstream repository is never inferred: the user shares it or the skill asks. No working directory is hard-coded.
+
+Production dry run (2026-10-28, read-only, output kept local) found and fixed: list ids only in the app package, backslash package entries, over-broad scope through shared lists, a stub README kept over the real one, and the hex-encoded Keychain value. Registered under devops.
+* **teams-commander:** evidence-gated Teams message drafts sent by deep link ([3aff456](https://github.com/nasimubd/skills/commit/3aff456e691519f9ce48959fbaa9f5f2fe77db58))
+
+A plugin (not an MCP server) for drafting Microsoft Teams messages that the user sends under their own name. Every factual claim is recorded with its source, exact excerpt, capture time and how to reproduce it, and is shown to the user next to the message.
+
+- bin/teams-commander: the plugin command, on the Bash PATH while the
+  plugin is enabled (Claude Code v2.1.91+)
+- scripts/teams.sh: draft ledger; verify refuses unverified or stale
+  facts (6 h); link/open refuse a message edited after verify; excerpts
+  shaped like credentials are rejected
+- hooks/evidence-gate.sh: denies opening a Teams chat link outside
+  teams-commander open; escape TEAMS-SEND-OK with a written reason;
+  fails open
+- skills: draft, reply (reads via the Microsoft 365 connector), send
+  (tier 1 deep link, the user presses Send), setup, health
+- references: style rules with provenance, evidence rules, templates,
+  documented deep-link behaviour
+
+Registered in the marketplace under the existing productivity category.
+
 # [1.3.0](https://github.com/nasimubd/skills/compare/v1.2.0...v1.3.0) (2026-10-01)
 
 

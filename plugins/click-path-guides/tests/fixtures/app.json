@@ -1,0 +1,27 @@
+{
+  "app": "Expense Tracker",
+  "screens": [
+    {
+      "name": "HomeScreen",
+      "title": "Expenses",
+      "controls": [
+        {"type": "button", "id": "btnNew", "label": "New expense", "action": "Navigate"},
+        {"type": "button", "id": "btnRefresh", "label": "Refresh", "action": "Reload"},
+        {"type": "menu", "id": "mnuFile", "label": "File", "items": [
+          {"label": "Export to CSV"},
+          {"label": "Settings"}
+        ]}
+      ]
+    },
+    {
+      "name": "FormScreen",
+      "title": "New expense",
+      "controls": [
+        {"type": "input", "id": "txtAmount", "label": "Amount", "placeholder": "0.00"},
+        {"type": "dropdown", "id": "ddCategory", "label": "Category", "options": ["Travel", "Meals", "Equipment"]},
+        {"type": "button", "id": "btnSubmit", "label": "Submit", "action": "Save"},
+        {"type": "button", "id": "btnCancel", "label": "Cancel", "action": "Back"}
+      ]
+    }
+  ]
+}

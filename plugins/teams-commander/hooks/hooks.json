@@ -1,0 +1,17 @@
+{
+  "description": "teams-commander evidence gate: deny ad-hoc Teams chat deep links so every message goes through the evidence-checked teams.sh open. Escape: TEAMS-SEND-OK: <reason>. Fail-open.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/evidence-gate.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

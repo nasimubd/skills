@@ -1,0 +1,8 @@
+{
+  "name": "automation-scaffold",
+  "description": "Scaffold a release-ready repository for a Power Platform, n8n, Make or Zapier automation from what runs in production: discovery with evidence, standard layout, git protocol, first release.",
+  "author": {
+    "name": "nasimubd",
+    "url": "https://github.com/nasimubd"
+  }
+}

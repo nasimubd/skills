@@ -1,0 +1,42 @@
+# Tool versions and tasks. First time: `mise install && mise run setup`.
+# There is no CI: checks and releases run locally through these tasks (docs/RELEASE.md).
+
+[tools]
+node = "24"
+jq = "1.7"
+
+[tasks.setup]
+description = "Install npm dev dependencies and the commit-msg hook"
+run = ["npm ci", "git config core.hooksPath .githooks"]
+
+[tasks."commits:check"]
+description = "Check this branch's commits against the commit convention"
+run = "npx --no-install commitlint --from origin/main --to HEAD --verbose"
+
+[tasks."components:check"]
+description = "Check releases/components.json against the component folders"
+run = "node scripts/check-components.js"
+
+[tasks."pr:check"]
+description = "Before opening or merging a PR: registry, branch commits, PR title and body (-- \"<title>\" [body-file])"
+run = "bash scripts/pr-check.sh"
+
+[tasks.export]
+description = "Export a component's production source into git: mise run export -- <id>|--all (read-only on the platform)"
+run = "node scripts/export.js"
+
+[tasks."release:pin"]
+description = "Pin the live version of a component: mise run release:pin <id> (read-only on the platform)"
+run = "node scripts/release-pin.js pin"
+
+[tasks."release:verify"]
+description = "Compare production with every pin; exits 1 on drift (read-only)"
+run = "node scripts/release-pin.js verify"
+
+[tasks."release:dry"]
+description = "Preview each component's next release; no tags, commits or pushes"
+run = "bash scripts/release.sh --dry-run --no-ci"
+
+[tasks.release]
+description = "Cut releases from a clean, up-to-date main: tags, CHANGELOG commits, GitHub Releases"
+run = "bash scripts/release.sh --no-ci"

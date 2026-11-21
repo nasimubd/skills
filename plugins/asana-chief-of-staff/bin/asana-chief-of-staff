@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+import argparse, json, os, urllib.error, urllib.request
+BASE = "https://app.asana.com/api/1.0"
+LEADSCOUT_SECTIONS = ["New Lead", "Verified", "Ready to Contact", "Contacted", "Awaiting Reply", "Positive Reply", "Negative Reply", "Human Handoff", "Paused", "Closed"]
+LEADSCOUT_TAGS = ["leadscout", "verified", "contacted", "awaiting-reply", "positive-reply", "negative-reply", "human-handoff", "paused"]
+def req(method, path, payload=None):
+    token = os.environ.get("ASANA_TOKEN")
+    if not token: raise SystemExit("ASANA_TOKEN is required")
+    body = None if payload is None else json.dumps({"data": payload}).encode()
+    request = urllib.request.Request(BASE + path, data=body, method=method, headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response: return json.load(response)
+    except urllib.error.HTTPError as error: raise SystemExit(f"Asana API {error.code}: {error.read().decode(errors='replace')}")
+def gid(name):
+    value = os.environ.get(name)
+    if not value: raise SystemExit(f"{name} is required")
+    return value
+def setup():
+    project = gid("ASANA_PROJECT_GID"); workspace = gid("ASANA_WORKSPACE_GID")
+    sections = req("GET", f"/projects/{project}/sections")["data"]
+    existing_sections = {item["name"]: item for item in sections}
+    created_sections = []
+    for name in LEADSCOUT_SECTIONS:
+        if name not in existing_sections:
+            created_sections.append(req("POST", f"/projects/{project}/sections", {"name": name})["data"])
+    tags = req("GET", f"/tags?workspace={workspace}&limit=100")["data"]
+    existing_tags = {item["name"]: item for item in tags}
+    created_tags = []
+    for name in LEADSCOUT_TAGS:
+        if name not in existing_tags:
+            created_tags.append(req("POST", "/tags", {"workspace": workspace, "name": name})["data"])
+    return {"project_gid": project, "sections": {"existing": sorted(existing_sections), "created": created_sections}, "tags": {"existing": sorted(existing_tags), "created": created_tags}, "ready": True}
+def main():
+    parser = argparse.ArgumentParser(prog="asana-chief-of-staff"); sub = parser.add_subparsers(dest="cmd", required=True)
+    for name in ("health", "project", "tasks", "setup"): sub.add_parser(name)
+    create = sub.add_parser("create"); create.add_argument("--name", required=True); create.add_argument("--notes", default="")
+    comment = sub.add_parser("comment"); comment.add_argument("--task", required=True); comment.add_argument("--text", required=True)
+    args = parser.parse_args()
+    if args.cmd == "health": out = req("GET", "/users/me")
+    elif args.cmd == "project": out = req("GET", "/projects/" + gid("ASANA_PROJECT_GID"))
+    elif args.cmd == "tasks": out = req("GET", f"/projects/{gid('ASANA_PROJECT_GID')}/tasks?opt_fields=name,completed,notes")
+    elif args.cmd == "setup": out = setup()
+    elif args.cmd == "create": out = req("POST", "/tasks", {"name": args.name, "notes": args.notes, "projects": [gid("ASANA_PROJECT_GID")]})
+    else: out = req("POST", f"/tasks/{args.task}/stories", {"text": args.text})
+    print(json.dumps(out, indent=2))
+if __name__ == "__main__": main()

@@ -1,0 +1,41 @@
+# change-guardrails default rules.
+#
+# One rule per line:   decision @@ scope @@ id @@ regex @@ message
+#
+#   decision  deny | ask       deny is stopped (an agent-supplied GUARD-OK marker turns it
+#                              into an ask); ask is put to the user.
+#   scope     cmd | raw | sql  cmd: the command with quoted text and heredoc bodies removed
+#                              (what would run). raw: the text as written, newlines joined.
+#                              sql: raw, case-insensitive.
+#   id        unique, lowercase kebab-case; the user file can disable it by id.
+#   regex     POSIX extended. {B} expands to "start of a word", so a command name matches
+#             at the start, after ; & | ( or a space, or after a path slash.
+#   message   shown to the user and to the agent. Must not contain the @@ separator.
+#
+# Keep this list small and high-signal: every false positive teaches people to bypass it.
+
+# --- deny: damage that is hard or impossible to undo --------------------------------
+
+deny@@cmd@@rm-system-path@@{B}(sudo[[:space:]]+)?rm[[:space:]]+(-[A-Za-z-]+[[:space:]]+)*-([A-Za-z]*[rR][A-Za-z]*|-recursive)[[:space:]]+(-[A-Za-z-]+[[:space:]]+)*(/|/\*|~|~/|~/\*|\$HOME|\$HOME/|\$HOME/\*|/(usr|etc|var|home|Users|System|Library|bin|sbin|boot|lib|opt)/?\*?)([[:space:];&|)`]|$)@@Recursive delete of the filesystem root, the home folder or a system directory
+deny@@cmd@@disk-format@@{B}(mkfs(\.[a-z0-9]+)?|wipefs|diskutil[[:space:]]+(eraseDisk|eraseVolume|partitionDisk|zeroDisk|secureErase))([[:space:]]|$)@@Formats or wipes a disk
+deny@@cmd@@dd-to-device@@{B}dd[[:space:]][^;&|]*of=/dev/(sd|nvme|disk|rdisk|hd|vd|xvd|mmcblk)@@Writes raw data straight to a block device
+deny@@cmd@@fork-bomb@@:\(\)[[:space:]]*\{[[:space:]]*:[[:space:]]*\|[[:space:]]*:@@Fork bomb
+deny@@cmd@@push-force-protected@@{B}git[[:space:]]+push[^;&|]*(([[:space:]](-f|--force)([[:space:]][^;&|]*)?[[:space:]:]\+?(main|master|trunk|production)([[:space:]]|$))|([[:space:]:](main|master|trunk|production)[[:space:]]([^;&|]*[[:space:]])?(-f|--force)([[:space:]]|$))|([[:space:]:]\+(main|master|trunk|production)([[:space:]]|$)))@@Force-pushes a protected branch (main, master, trunk, production)
+deny@@cmd@@push-delete-protected@@{B}git[[:space:]]+push[^;&|]*(([[:space:]](--delete|-d)[[:space:]][^;&|]*[[:space:]](main|master|trunk|production)([[:space:]]|$))|([[:space:]]:(main|master|trunk|production)([[:space:]]|$)))@@Deletes a protected branch on the remote
+deny@@sql@@sql-drop-database@@{B}(psql|mysql|mariadb|sqlite3|sqlcmd|mongosh|duckdb|snowsql|clickhouse-client|bq)[[:space:]].*drop[[:space:]]+(database|schema)@@Drops a whole database or schema
+
+# --- ask: risky, often legitimate; a person confirms ---------------------------------
+
+ask@@cmd@@rm-cwd@@{B}rm[[:space:]]+(-[A-Za-z-]+[[:space:]]+)*-([A-Za-z]*[rR][A-Za-z]*|-recursive)[[:space:]]+(-[A-Za-z-]+[[:space:]]+)*(\.|\./|\*|\.\*|\./\*)([[:space:];&|)`]|$)@@Recursive delete of everything in the current directory
+ask@@cmd@@git-force-push@@{B}git[[:space:]]+push[^;&|]*[[:space:]](-f|--force|--force-with-lease[^[:space:]]*|--force-if-includes)([[:space:]]|$)@@Force-push rewrites remote history
+ask@@cmd@@git-reset-hard@@{B}git[[:space:]]+reset[^;&|]*--hard@@Discards uncommitted work and moves the branch
+ask@@cmd@@git-clean-force@@{B}git[[:space:]]+clean[^;&|]*[[:space:]]-[A-Za-z]*f@@Deletes untracked files for good
+ask@@cmd@@git-discard-all@@{B}git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\.([[:space:]]|$)@@Discards every uncommitted change in the working tree
+ask@@cmd@@pipe-to-shell@@{B}(curl|wget)[[:space:]][^;&]*\|[[:space:]]*(sudo[[:space:]]+)?(ba|z|da|k)?sh([[:space:]]|$)@@Runs a downloaded script without reading it
+ask@@cmd@@decode-to-shell@@{B}(base64|xxd|openssl[[:space:]]+enc)[[:space:]][^;&]*\|[[:space:]]*(sudo[[:space:]]+)?(ba|z|da|k)?sh([[:space:]]|$)@@Runs a decoded string; the real command is hidden
+ask@@raw@@upload-data@@{B}curl[[:space:]]([^;&|]*[[:space:]])?((-T|--upload-file)[[:space:]]|-d[[:space:]]*["']?@|--data(-binary|-raw|-urlencode)?[[:space:]=]+["']?@|(-F|--form)[[:space:]]+["']?[^[:space:]=]+=["']?@)@@Uploads a local file to a remote server
+ask@@cmd@@publish-package@@{B}((npm|pnpm|yarn)[[:space:]]+publish|twine[[:space:]]+upload|cargo[[:space:]]+publish|gem[[:space:]]+push)([[:space:]]|$)@@Publishes a package to a public registry
+ask@@cmd@@infra-destroy@@{B}(((terraform|tofu)[[:space:]]+(destroy|apply[^;&|]*-auto-approve))|(pulumi[[:space:]]+destroy)|(kubectl[[:space:]]+delete)|(helm[[:space:]]+(uninstall|delete)))([[:space:]]|$)@@Destroys infrastructure or cluster resources
+ask@@cmd@@cloud-delete@@{B}(((aws|az|gcloud)[[:space:]][^;&|]*[[:space:]](delete|terminate|destroy)[a-z0-9-]*)|(aws[[:space:]]+s3[[:space:]]+(rm|rb)))([[:space:]]|$)@@Deletes cloud resources
+ask@@cmd@@gh-destructive@@{B}gh[[:space:]]+((repo[[:space:]]+(delete|archive))|(release[[:space:]]+delete)|(api[^;&|]*(-X|--method)[[:space:]]+DELETE))@@Deletes or archives something on the remote host
+ask@@sql@@sql-destroy-data@@{B}(psql|mysql|mariadb|sqlite3|sqlcmd|mongosh|duckdb|snowsql|clickhouse-client|bq)[[:space:]].*(drop[[:space:]]+table|truncate[[:space:]]+(table[[:space:]]+)?[a-z_"]|delete[[:space:]]+from[[:space:]]+[a-z_."]+[[:space:]]*(;|$))@@Drops a table, truncates one, or deletes every row (no WHERE)

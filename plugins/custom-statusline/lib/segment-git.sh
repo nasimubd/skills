@@ -1,86 +1,76 @@
 #!/usr/bin/env bash
-# Git segment: branch, dirty-state counts, ahead/behind — computed locally
-# with git, not from the stdin payload.
+# Git segment: working-tree indicators computed locally with git.
+#   M modified  D deleted  S staged  U untracked  ↑ ahead  ↓ behind
+#   ≡ stashes   ⚠ merge conflicts
+# Prints nothing outside a git repository. ↑ and ↓ appear only when the branch
+# has an upstream, because without one there is nothing to be ahead of.
 
-git_current_branch() {
-  local dir="$1"
-  local branch
-  branch="$(git -C "$dir" symbolic-ref --short -q HEAD 2>/dev/null)"
-  if [[ -n "$branch" ]]; then
-    printf '%s' "$branch"
-    return 0
-  fi
-  # Detached HEAD: fall back to a short commit hash, prefixed so it reads
-  # unmistakably as a commit rather than a branch name.
-  local short_sha
-  short_sha="$(git -C "$dir" rev-parse --short -q HEAD 2>/dev/null)"
-  [[ -n "$short_sha" ]] && printf 'detached:%s' "$short_sha"
-  return 0
-}
+CUSTOM_STATUSLINE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./runtime.sh
+source "$CUSTOM_STATUSLINE_LIB_DIR/runtime.sh"
 
-# Prints "staged modified untracked" as three space-separated counts.
+# Prints "modified deleted staged untracked conflicts", space-separated.
 git_dirty_counts() {
-  local dir="$1"
-  local porcelain
-  porcelain="$(git -C "$dir" status --porcelain=v1 2>/dev/null)" || {
-    printf '0 0 0'
+  local dir="$1" porcelain
+  porcelain="$(GIT_OPTIONAL_LOCKS=0 git -C "$dir" status --porcelain=v1 2>/dev/null)" || {
+    printf '0 0 0 0 0'
     return 0
   }
-
-  local staged=0 modified=0 untracked=0
+  local modified=0 deleted=0 staged=0 untracked=0 conflicts=0 line x y
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
-    local index_status="${line:0:1}" worktree_status="${line:1:1}"
-    [[ "$index_status" != " " && "$index_status" != "?" ]] && staged=$((staged + 1))
-    [[ "$worktree_status" == "M" || "$worktree_status" == "D" ]] && modified=$((modified + 1))
-    [[ "$index_status" == "?" ]] && untracked=$((untracked + 1))
+    x="${line:0:1}"
+    y="${line:1:1}"
+    case "$x$y" in
+      '??') untracked=$((untracked + 1)); continue ;;
+      '!!') continue ;;
+      DD | AU | UD | UA | DU | AA | UU) conflicts=$((conflicts + 1)); continue ;;
+    esac
+    [[ "$x" != " " ]] && staged=$((staged + 1))
+    [[ "$y" == "M" || "$y" == "T" ]] && modified=$((modified + 1))
+    [[ "$y" == "D" ]] && deleted=$((deleted + 1))
   done <<<"$porcelain"
-
-  printf '%d %d %d' "$staged" "$modified" "$untracked"
+  printf '%d %d %d %d %d' "$modified" "$deleted" "$staged" "$untracked" "$conflicts"
 }
 
-# Prints "ahead behind" as two space-separated counts vs. the upstream
-# branch. Prints "0 0" when there is no upstream configured — a repo with
-# no remote tracking branch isn't an error, it's just not comparable.
+# Prints "ahead behind", or nothing when the branch has no upstream.
 git_ahead_behind() {
-  local dir="$1"
-  local counts
-  counts="$(git -C "$dir" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null)" || {
-    printf '0 0'
-    return 0
-  }
-  # rev-list prints "behind\tahead" in that order.
-  local behind ahead
+  local counts behind ahead
+  counts="$(git -C "$1" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null)" || return 0
   read -r behind ahead <<<"$counts"
   printf '%d %d' "${ahead:-0}" "${behind:-0}"
 }
 
+git_stash_count() {
+  git -C "$1" stash list 2>/dev/null | wc -l | tr -d ' '
+}
+
+# One indicator: dim at zero, coloured when there is something to look at.
+git_indicator() {
+  local label="$1" value="$2" color="$3"
+  if [[ "$value" -eq 0 ]]; then
+    sl_color dim "$label:$value"
+  else
+    sl_color "$color" "$label:$value"
+  fi
+}
+
 segment_git() {
-  local payload_json="$1"
-  local dir
+  local payload_json="$1" dir
   dir="$(printf '%s' "$payload_json" | jq -r '.workspace.current_dir // .cwd // empty')"
   [[ -n "$dir" ]] || dir="."
+  git -C "$dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
 
-  local branch
-  branch="$(git_current_branch "$dir")"
-  [[ -n "$branch" ]] || return 0
+  local modified deleted staged untracked conflicts ahead behind stashes
+  read -r modified deleted staged untracked conflicts <<<"$(git_dirty_counts "$dir")"
+  stashes="$(git_stash_count "$dir")"
 
-  local staged modified untracked
-  read -r staged modified untracked <<<"$(git_dirty_counts "$dir")"
-
-  local dirty_state=""
-  [[ "$staged" -gt 0 ]] && dirty_state+="+${staged}"
-  [[ "$modified" -gt 0 ]] && dirty_state+="~${modified}"
-  [[ "$untracked" -gt 0 ]] && dirty_state+="?${untracked}"
-
-  local ahead behind
-  read -r ahead behind <<<"$(git_ahead_behind "$dir")"
-  local tracking_state=""
-  [[ "$ahead" -gt 0 ]] && tracking_state+="⇡${ahead}"
-  [[ "$behind" -gt 0 ]] && tracking_state+="⇣${behind}"
-
-  local out="$branch"
-  [[ -n "$dirty_state" ]] && out+=" $dirty_state"
-  [[ -n "$tracking_state" ]] && out+=" $tracking_state"
+  local out
+  out="$(git_indicator M "$modified" yellow) $(git_indicator D "$deleted" yellow)"
+  out+=" $(git_indicator S "$staged" green) $(git_indicator U "$untracked" yellow)"
+  if read -r ahead behind <<<"$(git_ahead_behind "$dir")" && [[ -n "${ahead:-}" ]]; then
+    out+=" $(git_indicator ↑ "$ahead" cyan) $(git_indicator ↓ "$behind" yellow)"
+  fi
+  out+=" $(git_indicator ≡ "${stashes:-0}" cyan) $(git_indicator ⚠ "$conflicts" red)"
   printf '%s' "$out"
 }
