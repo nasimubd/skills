@@ -35,7 +35,7 @@ is stale.
 | [`click-path-guides`](./plugins/click-path-guides) | Write step-by-step UI click-path guides that are checked against the application's own definition: every bold control must exist in the source, menu paths follow one format, and position or colour wording is rejected. | `documentation` |
 | [`custom-statusline`](./plugins/custom-statusline) | Multi-line Claude Code status line driven by the statusline JSON payload plus GitHub-derived repository signals. | `productivity` |
 | [`investigation-tools`](./plugins/investigation-tools) | Read-only triage briefs and blameless incident notes whose claims carry evidence: scans fetched content for planted instructions, keeps secrets out of what is saved, and takes verifiable snapshots before any change. | `devops` |
-| [`quant-integrity-auditor`](./plugins/quant-integrity-auditor) | Issue-first quantitative trading audit with reproducible findings and guarded GitHub reporting. |
+| [`quant-integrity-auditor`](./plugins/quant-integrity-auditor) | Issue-first quantitative trading integrity auditor with reproducible evidence and guarded GitHub reporting. | `trading` |
 | [`norn-agent`](./plugins/norn-agent) | Install and operate Norn, a local-first runtime for routing natural-language tasks across tools, models, desktop automation, and approval gates. | `productivity` |
 | [`teams-commander`](./plugins/teams-commander) | Draft Microsoft Teams messages where every factual claim is backed by evidence you can see, then open the chat in the Teams app with the message on your clipboard. | `productivity` |
 | [`typeless-migrate`](./plugins/typeless-migrate) | Safely archive Typeless history, recordings, settings, and dictionary-import data without copying account credentials. | `productivity` |
