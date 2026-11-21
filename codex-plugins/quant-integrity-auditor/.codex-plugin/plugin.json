@@ -1,0 +1,16 @@
+{
+  "name":"quant-integrity-auditor",
+  "version":"0.1.0",
+  "description":"Shared quantitative integrity audit skill and deterministic evidence tooling.",
+  "author":{"name":"nasimubd","url":"https://github.com/nasimubd"},
+  "skills":"./skills/",
+  "interface":{
+    "displayName":"Quant Integrity Auditor",
+    "shortDescription":"Audit trading systems with issue-first evidence.",
+    "longDescription":"Shared Agent Skill for Claude Code and Codex, with reproducible findings and guarded GitHub publication.",
+    "developerName":"nasimubd",
+    "category":"Productivity",
+    "capabilities":[],
+    "defaultPrompt":"Use $quantitative-integrity-audit to audit this repository."
+  }
+}

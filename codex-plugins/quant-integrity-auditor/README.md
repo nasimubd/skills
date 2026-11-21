@@ -1,0 +1,3 @@
+# Quant Integrity Auditor for Codex
+
+This Codex plugin package links `skills/quantitative-integrity-audit` to the canonical shared skill. From a checkout, run `node scripts/package-quant-integrity.mjs <package-directory>` and use the generated `codex/quant-integrity-auditor` package for distribution. For direct project discovery, link or copy the generated `skills/quantitative-integrity-audit` directory into the target repository's `.agents/skills/` directory and invoke `$quantitative-integrity-audit`. The source checkout's `.agents/skills/quantitative-integrity-audit` registration also exposes the canonical skill. See the canonical README for operations, tests and publication controls.

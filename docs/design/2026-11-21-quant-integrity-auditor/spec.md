@@ -1,0 +1,5 @@
+# Quant integrity auditor design
+
+`qia inventory` resolves target GitHub identity, fetches all issue pages plus comments and timeline, redacts recognized secrets, and writes a checksummed private baseline. `qia audit` repeats that operation before reading agent-produced findings, excludes matching root-cause fingerprints, validates confirmed evidence and writes a consolidated report. `qia publish --publish-issues` checks report provenance, asks for typed confirmation, refetches issues and creates one issue per eligible root cause. It never calls an exchange or mutates trading code.
+
+The five synthetic fixtures exercise point-in-time OI alignment, OR gate integration, feature ordering, false veto and stop percentage conversion. Tests cover pagination, exclusion, repeated reproduction, false positives, secrets and mock publication. Host adapters are symlinks to the canonical skill. Deployment checks are investigator-driven because environments differ; the report labels missing deployment evidence unverified.

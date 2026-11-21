@@ -198,6 +198,23 @@
         "oauth",
         "infrastructure"
       ]
+    },
+    {
+      "name": "quant-integrity-auditor",
+      "description": "Issue-first quantitative trading integrity auditor with reproducible evidence and guarded GitHub reporting.",
+      "version": "1.8.0",
+      "source": "./plugins/quant-integrity-auditor",
+      "category": "trading",
+      "author": {
+        "name": "nasimubd",
+        "url": "https://github.com/nasimubd"
+      },
+      "keywords": [
+        "trading",
+        "audit",
+        "quant",
+        "integrity"
+      ]
     }
   ]
 }

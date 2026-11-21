@@ -156,3 +156,7 @@ is read as the plugin prefix, not the command.
 
 The plugin is archive-first. It excludes session stores, cookies, billing/team identity,
 sync cursors and learned personalization; its default command is a non-mutating dry run.
+
+## Quant integrity auditor
+
+`quant-integrity-auditor` links to the canonical skill under `skills/`. Keep its Claude skill body and scripts shared; never fork them. Its issue inventory precedes stage work and publication is separately gated.

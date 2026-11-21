@@ -1,0 +1,9 @@
+# Quantitative integrity audit
+
+The canonical Agent Skill investigates a target trading repository in read-only mode. It inventories all GitHub issues before stage work, excludes previously reported root causes, requires independent reproduction for confirmed defects, and prepares provenance-rich reports. The Node CLI supplies deterministic collection and publication guards; the AI investigator performs architectural, mathematical, and financial analysis.
+
+Invoke `$quantitative-integrity-audit` in Codex or `/quant-integrity-auditor:quantitative-integrity-audit` in Claude Code. In the target repository run `node <installed-skill>/scripts/qia inventory --out <private-directory>`; after investigation provide a JSON findings array to `audit --findings <file> --out <private-directory>`. The CLI refetches issues before `audit`. `report` prints the report. `publish --publish-issues` requires typed confirmation and rechecks GitHub immediately before each run. Do not use publication during development.
+
+The stage references cover market data, event gate, alphas, meta-labeling, risk/execution, deployment and the full signal path. No deployment access means deployment integrity remains unverified. An audit does not patch defects or touch exchange state. See `references/`, `evals/fixtures/`, and `tests/` for methodology and reproducibility.
+
+Run tests with `node --test skills/quantitative-integrity-audit/tests/*.test.mjs` from the skills checkout. Keep private evidence outside tracked files; the CLI writes mode 0600 and redacts recognized secrets. Review all evidence before publication because unknown secret formats need human judgment. When historical issues have no structured fingerprint, include every such issue number in `reviewedIssueNumbers` and explain `noveltyRationale` for each proposed finding; publication blocks otherwise. Optional `--coverage <json>` attaches stage inspection and test counts to a report.
